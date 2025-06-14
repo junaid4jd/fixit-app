@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "804048152258",
+    "project_id": "fixit-oman",
+    "storage_bucket": "fixit-oman.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:804048152258:android:3350abdc02f7713dc2fd5b",
+        "android_client_info": {
+          "package_name": "com.fixit.oman"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_udt3JpiFe_v9e-Ce9P4A1ia2UvuufOw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

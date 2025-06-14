@@ -1,0 +1,111 @@
+{
+  "@@locale": "en",
+  "appTitle": "Fixit Oman",
+  "@appTitle": {
+    "description": "Title of the application"
+  },
+  "welcome": "Welcome",
+  "@welcome": {
+    "description": "Welcome message"
+  },
+  "signIn": "Sign In",
+  "@signIn": {
+    "description": "Sign in button text"
+  },
+  "signUp": "Sign Up",
+  "@signUp": {
+    "description": "Sign up button text"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "Email field label"
+  },
+  "password": "Password",
+  "@password": {
+    "description": "Password field label"
+  },
+  "fullName": "Full Name",
+  "@fullName": {
+    "description": "Full name field label"
+  },
+  "phoneNumber": "Phone Number",
+  "@phoneNumber": {
+    "description": "Phone number field label"
+  },
+  "selectRole": "Select Your Role",
+  "@selectRole": {
+    "description": "Role selection title"
+  },
+  "customer": "Customer",
+  "@customer": {
+    "description": "Customer role"
+  },
+  "serviceProvider": "Service Provider",
+  "@serviceProvider": {
+    "description": "Service provider role"
+  },
+  "admin": "Admin",
+  "@admin": {
+    "description": "Admin role"
+  },
+  "home": "Home",
+  "@home": {
+    "description": "Home navigation item"
+  },
+  "bookings": "Bookings",
+  "@bookings": {
+    "description": "Bookings navigation item"
+  },
+  "profile": "Profile",
+  "@profile": {
+    "description": "Profile navigation item"
+  },
+  "notifications": "Notifications",
+  "@notifications": {
+    "description": "Notifications navigation item"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings navigation item"
+  },
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Loading indicator text"
+  },
+  "error": "Error",
+  "@error": {
+    "description": "Error message"
+  },
+  "success": "Success",
+  "@success": {
+    "description": "Success message"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button text"
+  },
+  "confirm": "Confirm",
+  "@confirm": {
+    "description": "Confirm button text"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Save button text"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button text"
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Search placeholder text"
+  },
+  "noResults": "No results found",
+  "@noResults": {
+    "description": "No search results message"
+  },
+  "tryAgain": "Try Again",
+  "@tryAgain": {
+    "description": "Try again button text"
+  }
+}
