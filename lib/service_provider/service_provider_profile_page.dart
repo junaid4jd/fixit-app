@@ -122,23 +122,155 @@ class _ServiceProviderProfilePageState
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        QuerySnapshot reviewsSnapshot = await FirebaseFirestore.instance
-            .collection('reviews')
-            .where('handymanId', isEqualTo: user.uid)
-            .orderBy('createdAt', descending: true)
-            .limit(5)
-            .get();
+        debugPrint('🔍 Loading reviews for handyman: ${user.uid}');
 
-        List<Map<String, dynamic>> reviews = reviewsSnapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+        // Try multiple query approaches to find reviews
+        List<Map<String, dynamic>> allReviews = [];
+
+        // Query 1: handymanId field (new format)
+        try {
+          QuerySnapshot reviewsSnapshot1 = await FirebaseFirestore.instance
+              .collection('reviews')
+              .where('handymanId', isEqualTo: user.uid)
+              .where('status', isEqualTo: 'approved')
+              .orderBy('createdAt', descending: true)
+              .limit(10)
+              .get();
+
+          debugPrint(
+              '📋 Query 1 (handymanId + approved): Found ${reviewsSnapshot1.docs
+                  .length} reviews');
+
+          for (var doc in reviewsSnapshot1.docs) {
+            allReviews.add({
+              'id': doc.id,
+              ...doc.data() as Map<String, dynamic>,
+            });
+          }
+        } catch (e) {
+          debugPrint('⚠️ Query 1 failed: $e');
+        }
+
+        // Query 2: handyman_id field (old format)
+        try {
+          QuerySnapshot reviewsSnapshot2 = await FirebaseFirestore.instance
+              .collection('reviews')
+              .where('handyman_id', isEqualTo: user.uid)
+              .where('status', isEqualTo: 'approved')
+              .orderBy('created_at', descending: true)
+              .limit(10)
+              .get();
+
+          debugPrint(
+              '📋 Query 2 (handyman_id + approved): Found ${reviewsSnapshot2.docs
+                  .length} reviews');
+
+          for (var doc in reviewsSnapshot2.docs) {
+            Map<String, dynamic> reviewData = {
+              'id': doc.id,
+              ...doc.data() as Map<String, dynamic>,
+            };
+
+            // Check if this review is already in the list (avoid duplicates)
+            bool isDuplicate = allReviews.any((
+                existingReview) => existingReview['id'] == doc.id);
+            if (!isDuplicate) {
+              allReviews.add(reviewData);
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ Query 2 failed: $e');
+        }
+
+        // Query 3: Fallback - get all reviews for this handyman (any status)
+        if (allReviews.isEmpty) {
+          try {
+            debugPrint('🔄 Trying fallback query without status filter...');
+
+            QuerySnapshot fallbackSnapshot = await FirebaseFirestore.instance
+                .collection('reviews')
+                .where('handymanId', isEqualTo: user.uid)
+                .get();
+
+            debugPrint(
+                '📋 Fallback query (handymanId): Found ${fallbackSnapshot.docs
+                    .length} reviews');
+
+            for (var doc in fallbackSnapshot.docs) {
+              Map<String, dynamic> reviewData = doc.data() as Map<
+                  String,
+                  dynamic>;
+              debugPrint(
+                  '📄 Review status: ${reviewData['status']}, rating: ${reviewData['rating']}');
+
+              allReviews.add({
+                'id': doc.id,
+                ...reviewData,
+              });
+            }
+          } catch (e) {
+            debugPrint('⚠️ Fallback query also failed: $e');
+          }
+        }
+
+        // Convert and format reviews for display
+        List<Map<String, dynamic>> formattedReviews = allReviews.map((review) {
+          return {
+            'userName': review['user_name'] ?? 'Anonymous',
+            'rating': review['rating'] ?? 0,
+            'comment': review['comment'] ?? '',
+            'date': _formatReviewDate(
+                review['created_at'] ?? review['createdAt']),
+            'status': review['status'] ?? 'unknown',
+            'category': review['category'] ?? 'General',
+          };
+        }).toList();
+
+        debugPrint('✅ Final processed reviews: ${formattedReviews.length}');
+        for (int i = 0; i < formattedReviews.length; i++) {
+          debugPrint(
+              '📝 Review $i: ${formattedReviews[i]['userName']} - ${formattedReviews[i]['rating']} stars - ${formattedReviews[i]['status']}');
+        }
 
         setState(() {
-          _reviews = reviews;
+          _reviews = formattedReviews;
         });
       }
     } catch (e) {
-      debugPrint('Error loading reviews: $e');
+      debugPrint('❌ Error loading reviews: $e');
+    }
+  }
+
+  String _formatReviewDate(dynamic timestamp) {
+    if (timestamp == null) return 'Recently';
+
+    try {
+      DateTime date;
+      if (timestamp is Timestamp) {
+        date = timestamp.toDate();
+      } else if (timestamp is String) {
+        date = DateTime.parse(timestamp);
+      } else {
+        return 'Recently';
+      }
+
+      final now = DateTime.now();
+      final difference = now
+          .difference(date)
+          .inDays;
+
+      if (difference == 0) {
+        return 'Today';
+      } else if (difference == 1) {
+        return 'Yesterday';
+      } else if (difference < 7) {
+        return '$difference days ago';
+      } else {
+        return '${date.day}/${date.month}/${date.year}';
+      }
+    } catch (e) {
+      debugPrint('Error formatting date: $e');
+      return 'Recently';
     }
   }
 
@@ -146,43 +278,109 @@ class _ServiceProviderProfilePageState
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Get completed bookings count
-        QuerySnapshot completedBookings = await FirebaseFirestore.instance
-            .collection('bookings')
-            .where('handymanId', isEqualTo: user.uid)
-            .where('status', isEqualTo: 'completed')
-            .get();
+        debugPrint('📊 Loading stats for handyman: ${user.uid}');
+
+        // Get completed bookings count (try both field names)
+        QuerySnapshot completedBookings;
+        try {
+          completedBookings = await FirebaseFirestore.instance
+              .collection('bookings')
+              .where(
+              'handyman_id', isEqualTo: user.uid) // Changed from handymanId
+              .where('status', isEqualTo: 'completed')
+              .get();
+          debugPrint(
+              '✅ Found ${completedBookings.docs.length} completed bookings');
+        } catch (e) {
+          debugPrint('⚠️ First query failed, trying fallback: $e');
+          // Fallback to handymanId field
+          completedBookings = await FirebaseFirestore.instance
+              .collection('bookings')
+              .where('handymanId', isEqualTo: user.uid)
+              .where('status', isEqualTo: 'completed')
+              .get();
+          debugPrint('✅ Fallback found ${completedBookings.docs
+              .length} completed bookings');
+        }
 
         // Calculate total earnings
         double totalEarnings = 0;
         for (var doc in completedBookings.docs) {
           Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-          totalEarnings += data['estimatedCost'] ?? 0;
+          double cost = (data['estimated_cost'] ?? data['estimatedCost'] ?? 0)
+              .toDouble();
+          totalEarnings += cost;
         }
+        debugPrint('💰 Total earnings calculated: $totalEarnings OMR');
 
         // Get this month's bookings
         DateTime now = DateTime.now();
         DateTime startOfMonth = DateTime(now.year, now.month, 1);
-        QuerySnapshot thisMonthBookings = await FirebaseFirestore.instance
-            .collection('bookings')
-            .where('handymanId', isEqualTo: user.uid)
-            .where('status', isEqualTo: 'completed')
-            .where('completedAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
-            .get();
+        QuerySnapshot thisMonthBookings;
+        try {
+          thisMonthBookings = await FirebaseFirestore.instance
+              .collection('bookings')
+              .where(
+              'handyman_id', isEqualTo: user.uid) // Changed from handymanId
+              .where('status', isEqualTo: 'completed')
+              .where('completed_at', isGreaterThanOrEqualTo: Timestamp.fromDate(
+              startOfMonth)) // Changed from completedAt
+              .get();
+          debugPrint(
+              '✅ Found ${thisMonthBookings.docs.length} bookings this month');
+        } catch (e) {
+          debugPrint('⚠️ Monthly bookings query failed: $e');
+          // Simpler fallback without date filter
+          thisMonthBookings = await FirebaseFirestore.instance
+              .collection('bookings')
+              .where('handyman_id', isEqualTo: user.uid)
+              .where('status', isEqualTo: 'completed')
+              .get();
+
+          // Filter manually for this month
+          List<QueryDocumentSnapshot> thisMonthDocs = thisMonthBookings.docs
+              .where((doc) {
+            Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+            Timestamp? completedAt = data['completed_at'] ??
+                data['completedAt'];
+            if (completedAt != null) {
+              return completedAt.toDate().isAfter(startOfMonth);
+            }
+            return false;
+          }).toList();
+
+          debugPrint('✅ Manually filtered: ${thisMonthDocs
+              .length} bookings this month');
+          // Create a new QuerySnapshot-like object (simplified)
+          // For now, just use the count
+        }
 
         setState(() {
           _stats = {
             'completedJobs': completedBookings.docs.length,
             'totalEarnings': totalEarnings,
             'thisMonthJobs': thisMonthBookings.docs.length,
-            'rating': _userData?['rating'] ?? 0.0,
-            'reviewCount': _userData?['reviewCount'] ?? 0,
+            'rating': _userData?['averageRating'] ?? _userData?['rating'] ??
+                0.0,
+            'reviewCount': _userData?['totalReviews'] ??
+                _userData?['reviewCount'] ?? 0,
           };
         });
+
+        debugPrint('📈 Stats loaded: ${_stats}');
       }
     } catch (e) {
-      debugPrint('Error loading stats: $e');
+      debugPrint('❌ Error loading stats: $e');
+      setState(() {
+        _stats = {
+          'completedJobs': 0,
+          'totalEarnings': 0.0,
+          'thisMonthJobs': 0,
+          'rating': _userData?['averageRating'] ?? _userData?['rating'] ?? 0.0,
+          'reviewCount': _userData?['totalReviews'] ??
+              _userData?['reviewCount'] ?? 0,
+        };
+      });
     }
   }
 
