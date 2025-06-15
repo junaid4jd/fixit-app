@@ -1094,6 +1094,22 @@ class _ServiceProviderProfilePageState
               );
             },
           ),
+          _buildSettingsItem(
+            icon: Icons.bug_report,
+            title: 'Debug Reviews',
+            subtitle: 'Test review loading (Debug)',
+            onTap: () async {
+              debugPrint('🔍 Debug: Testing review loading from profile...');
+              await _loadReviews();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Debug: Found ${_reviews
+                      .length} reviews. Check console for details.'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            },
+          ),
           const Divider(height: 32),
           _buildSettingsItem(
             icon: Icons.logout,

@@ -1247,6 +1247,13 @@ class _RatingDialogState extends State<_RatingDialog> {
     setState(() => _isSubmitting = true);
 
     try {
+      debugPrint('🌟 === REVIEW SUBMISSION STARTED ===');
+      debugPrint('📝 Rating: $selectedRating');
+      debugPrint('💬 Comment: ${_commentController.text.trim()}');
+      debugPrint('📋 Booking ID: ${widget.booking['id']}');
+      debugPrint('👤 User ID: ${widget.booking['user_id']}');
+      debugPrint('🔧 Handyman ID: ${widget.booking['handyman_id']}');
+
       // Get user and handyman names for the review
       String userName = 'Anonymous';
       String handymanName = 'Unknown';
@@ -1256,12 +1263,16 @@ class _RatingDialogState extends State<_RatingDialog> {
         // Get current user's name
         final currentUser = FirebaseAuth.instance.currentUser;
         if (currentUser != null) {
+          debugPrint('🔍 Fetching current user data for: ${currentUser.uid}');
           final userDoc = await FirebaseFirestore.instance
               .collection('users')
               .doc(currentUser.uid)
               .get();
           if (userDoc.exists) {
             userName = userDoc.data()?['fullName'] ?? 'Anonymous';
+            debugPrint('✅ User name found: $userName');
+          } else {
+            debugPrint('⚠️ User document not found');
           }
         }
 
@@ -1270,21 +1281,27 @@ class _RatingDialogState extends State<_RatingDialog> {
             dynamic>?;
         if (handymanData != null) {
           handymanName = handymanData['fullName'] ?? 'Unknown';
+          debugPrint('✅ Handyman name from booking data: $handymanName');
         } else if (widget.booking['handyman_id'] != null) {
+          debugPrint(
+              '🔍 Fetching handyman data for: ${widget.booking['handyman_id']}');
           final handymanDoc = await FirebaseFirestore.instance
               .collection('users')
               .doc(widget.booking['handyman_id'])
               .get();
           if (handymanDoc.exists) {
             handymanName = handymanDoc.data()?['fullName'] ?? 'Unknown';
+            debugPrint('✅ Handyman name from database: $handymanName');
+          } else {
+            debugPrint('⚠️ Handyman document not found');
           }
         }
       } catch (e) {
-        debugPrint('Error getting user/handyman names: $e');
+        debugPrint('❌ Error getting user/handyman names: $e');
       }
 
-      // Submit rating to Firebase with all required fields
-      await FirebaseFirestore.instance.collection('reviews').add({
+      // Prepare review data
+      Map<String, dynamic> reviewData = {
         'booking_id': widget.booking['id'],
         'user_id': widget.booking['user_id'],
         'handyman_id': widget.booking['handyman_id'],
@@ -1302,9 +1319,45 @@ class _RatingDialogState extends State<_RatingDialog> {
         'status': 'pending',
         // Reviews need admin approval
         'is_reviewed': true,
+      };
+
+      debugPrint('📄 Review data to be saved:');
+      reviewData.forEach((key, value) {
+        if (value is! FieldValue) {
+          debugPrint('  $key: $value');
+        } else {
+          debugPrint('  $key: [ServerTimestamp]');
+        }
       });
 
+      // Submit rating to Firebase with all required fields
+      debugPrint('💾 Saving review to Firestore...');
+      DocumentReference reviewRef = await FirebaseFirestore.instance.collection(
+          'reviews').add(reviewData);
+      debugPrint('✅ Review saved with ID: ${reviewRef.id}');
+
+      // Verify the review was saved
+      try {
+        DocumentSnapshot savedReview = await reviewRef.get();
+        if (savedReview.exists) {
+          Map<String, dynamic> savedData = savedReview.data() as Map<
+              String,
+              dynamic>;
+          debugPrint('✅ Review verification successful:');
+          debugPrint('  - ID: ${savedReview.id}');
+          debugPrint('  - Status: ${savedData['status']}');
+          debugPrint('  - Handyman ID: ${savedData['handyman_id']}');
+          debugPrint('  - HandymanId: ${savedData['handymanId']}');
+          debugPrint('  - Rating: ${savedData['rating']}');
+        } else {
+          debugPrint('❌ Review not found after saving!');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Could not verify saved review: $e');
+      }
+
       // Update booking to mark as reviewed
+      debugPrint('📝 Updating booking status...');
       await FirebaseFirestore.instance
           .collection('bookings')
           .doc(widget.booking['id'])
@@ -1312,10 +1365,12 @@ class _RatingDialogState extends State<_RatingDialog> {
         'is_reviewed': true,
         'reviewed_at': FieldValue.serverTimestamp(),
       });
+      debugPrint('✅ Booking updated as reviewed');
 
       // Update handyman's average rating
       final handymanId = widget.booking['handyman_id'];
       if (handymanId != null) {
+        debugPrint('📊 Updating handyman rating for: $handymanId');
         final handymanRef = FirebaseFirestore.instance.collection('users').doc(
             handymanId);
         await FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -1328,15 +1383,25 @@ class _RatingDialogState extends State<_RatingDialog> {
             final newAverageRating = ((currentRating * totalReviews) +
                 selectedRating) / newTotalReviews;
 
+            debugPrint('📈 Rating update:');
+            debugPrint('  - Previous: $currentRating ($totalReviews reviews)');
+            debugPrint('  - New: $newAverageRating ($newTotalReviews reviews)');
+
             transaction.update(handymanRef, {
               'averageRating': newAverageRating,
               'totalReviews': newTotalReviews,
               'reviewCount': newTotalReviews,
               // Add this for service provider profile
             });
+
+            debugPrint('✅ Handyman rating updated successfully');
+          } else {
+            debugPrint('⚠️ Handyman document not found for rating update');
           }
         });
       }
+
+      debugPrint('🎉 === REVIEW SUBMISSION COMPLETED SUCCESSFULLY ===');
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -1351,7 +1416,10 @@ class _RatingDialogState extends State<_RatingDialog> {
         widget.onRated();
       }
     } catch (e) {
-      print('Error submitting rating: $e');
+      debugPrint('💥 === REVIEW SUBMISSION FAILED ===');
+      debugPrint('❌ Error: $e');
+      debugPrint('📍 Stack trace: ${StackTrace.current}');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

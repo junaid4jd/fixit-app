@@ -113,6 +113,53 @@ class _DebugReviewsScreenState extends State<DebugReviewsScreen> {
     }
   }
 
+  Future<void> _createTestReview() async {
+    try {
+      if (_currentUserId == null) return;
+
+      debugPrint('🧪 Creating test review for handyman: $_currentUserId');
+
+      // Create a test review with all the required fields
+      await FirebaseFirestore.instance.collection('reviews').add({
+        'booking_id': 'test_booking_${DateTime
+            .now()
+            .millisecondsSinceEpoch}',
+        'user_id': 'test_user_123',
+        'handyman_id': _currentUserId, // Old format
+        'handymanId': _currentUserId, // New format
+        'user_name': 'Test Customer',
+        'handyman_name': 'Current Handyman',
+        'rating': 5,
+        'comment': 'This is a test review created for debugging purposes. Service was excellent!',
+        'category': 'Testing',
+        'created_at': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'status': 'approved', // Auto-approve for testing
+        'is_reviewed': true,
+      });
+
+      debugPrint('✅ Test review created successfully');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Test review created successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Reload data to show the new review
+      _loadAllReviewsForDebugging();
+    } catch (e) {
+      debugPrint('❌ Error creating test review: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error creating test review: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,6 +176,11 @@ class _DebugReviewsScreenState extends State<DebugReviewsScreen> {
             onPressed: _approveAllMyReviews,
             icon: const Icon(Icons.check_circle),
             tooltip: 'Approve All My Reviews',
+          ),
+          IconButton(
+            onPressed: _createTestReview,
+            icon: const Icon(Icons.add),
+            tooltip: 'Create Test Review',
           ),
         ],
       ),
