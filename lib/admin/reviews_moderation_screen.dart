@@ -81,6 +81,30 @@ class _ReviewsModerationScreenState extends State<ReviewsModerationScreen>
     }
   }
 
+  Future<void> _approveAllPendingReviews() async {
+    try {
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('reviews')
+          .where('status', isEqualTo: 'pending')
+          .get();
+
+      for (final DocumentSnapshot doc in snapshot.docs) {
+        await doc.reference.update({
+          'status': 'approved',
+          'moderated_at': FieldValue.serverTimestamp()
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All pending reviews approved')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error approving all reviews: $e')),
+      );
+    }
+  }
+
   void _showRejectDialog(String reviewId) {
     final reasonController = TextEditingController();
 
@@ -156,6 +180,13 @@ class _ReviewsModerationScreenState extends State<ReviewsModerationScreen>
           _buildReviewsList('rejected'),
         ],
       ),
+      floatingActionButton: _tabController.index == 0 ? FloatingActionButton
+          .extended(
+        onPressed: _approveAllPendingReviews,
+        backgroundColor: Colors.green,
+        icon: const Icon(Icons.check_circle, color: Colors.white),
+        label: const Text('Approve All', style: TextStyle(color: Colors.white)),
+      ) : null,
     );
   }
 
