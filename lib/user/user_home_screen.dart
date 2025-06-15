@@ -895,7 +895,8 @@ class _HomePageState extends State<HomePage> {
                                           // Reduced from 12 to 11
                                           const SizedBox(width: 2),
                                           Text(
-                                            '${(handymanData['rating'] ?? 0.0)
+                                            '${(handymanData['averageRating'] ??
+                                                handymanData['rating'] ?? 0.0)
                                                 .toStringAsFixed(1)}',
                                             style: const TextStyle(
                                               fontSize: 9,
@@ -912,8 +913,9 @@ class _HomePageState extends State<HomePage> {
                                           const SizedBox(width: 3),
                                           // Reduced from 4 to 3
                                           Text(
-                                            '${handymanData['experienceYears'] ??
-                                                0}yrs',
+                                            '${handymanData['totalReviews'] ??
+                                                handymanData['reviewCount'] ??
+                                                0} reviews',
                                             style: TextStyle(
                                               fontSize: 9,
                                               // Reduced from 10 to 9
@@ -1134,12 +1136,22 @@ class _HomePageState extends State<HomePage> {
                           const Icon(Icons.star, color: Colors.amber, size: 16),
                           const SizedBox(width: 4),
                           Text(
-                            '${(handymanData['rating'] ?? 0.0).toStringAsFixed(
+                            '${(handymanData['averageRating'] ??
+                                handymanData['rating'] ?? 0.0).toStringAsFixed(
                                 1)}',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${handymanData['totalReviews'] ??
+                                handymanData['reviewCount'] ?? 0} reviews)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
                             ),
                           ),
                         ],
