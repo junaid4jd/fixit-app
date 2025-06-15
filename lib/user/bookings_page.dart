@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'chat_screen.dart';
 
@@ -1246,15 +1247,70 @@ class _RatingDialogState extends State<_RatingDialog> {
     setState(() => _isSubmitting = true);
 
     try {
-      // Submit rating to Firebase
+      // Get user and handyman names for the review
+      String userName = 'Anonymous';
+      String handymanName = 'Unknown';
+      String category = widget.booking['category'] ?? 'General';
+
+      try {
+        // Get current user's name
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
+          if (userDoc.exists) {
+            userName = userDoc.data()?['fullName'] ?? 'Anonymous';
+          }
+        }
+
+        // Get handyman's name
+        final handymanData = widget.booking['handyman'] as Map<String,
+            dynamic>?;
+        if (handymanData != null) {
+          handymanName = handymanData['fullName'] ?? 'Unknown';
+        } else if (widget.booking['handyman_id'] != null) {
+          final handymanDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.booking['handyman_id'])
+              .get();
+          if (handymanDoc.exists) {
+            handymanName = handymanDoc.data()?['fullName'] ?? 'Unknown';
+          }
+        }
+      } catch (e) {
+        debugPrint('Error getting user/handyman names: $e');
+      }
+
+      // Submit rating to Firebase with all required fields
       await FirebaseFirestore.instance.collection('reviews').add({
         'booking_id': widget.booking['id'],
         'user_id': widget.booking['user_id'],
         'handyman_id': widget.booking['handyman_id'],
+        // Keep this for compatibility
+        'handymanId': widget.booking['handyman_id'],
+        // Add this for service provider queries
+        'user_name': userName,
+        'handyman_name': handymanName,
         'rating': selectedRating,
         'comment': _commentController.text.trim(),
+        'category': category,
         'created_at': FieldValue.serverTimestamp(),
-        'status': 'approved',
+        'createdAt': FieldValue.serverTimestamp(),
+        // Add this for service provider queries
+        'status': 'pending',
+        // Reviews need admin approval
+        'is_reviewed': true,
+      });
+
+      // Update booking to mark as reviewed
+      await FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(widget.booking['id'])
+          .update({
+        'is_reviewed': true,
+        'reviewed_at': FieldValue.serverTimestamp(),
       });
 
       // Update handyman's average rating
@@ -1275,6 +1331,8 @@ class _RatingDialogState extends State<_RatingDialog> {
             transaction.update(handymanRef, {
               'averageRating': newAverageRating,
               'totalReviews': newTotalReviews,
+              'reviewCount': newTotalReviews,
+              // Add this for service provider profile
             });
           }
         });
@@ -1284,8 +1342,10 @@ class _RatingDialogState extends State<_RatingDialog> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Rating submitted successfully!'),
+            content: Text(
+                'Review submitted successfully! It will be visible after admin approval.'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
           ),
         );
         widget.onRated();
