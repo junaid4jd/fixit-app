@@ -1197,107 +1197,376 @@ class _HomePageState extends State<HomePage> {
                   );
                 }
 
-                return ListView.builder(
+                return SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: snapshot.data!.docs.length,
-                  itemBuilder: (context, index) {
-                    final doc = snapshot.data!.docs[index];
-                    final serviceData = doc.data() as Map<String, dynamic>;
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[200]!),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Services Section
+                      const Text(
+                        'Available Services',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 12),
+
+                      // Services List
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: snapshot.data!.docs.length,
+                        itemBuilder: (context, index) {
+                          final doc = snapshot.data!.docs[index];
+                          final serviceData = doc.data() as Map<String,
+                              dynamic>;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[200]!),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        serviceData['title'] ?? 'Service',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF2C3E50),
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF4169E1)
+                                            .withValues(
+                                            alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        serviceData['category'] ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF4169E1),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  serviceData['description'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[700],
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment
+                                      .spaceBetween,
+                                  children: [
+                                    Text(
+                                      'OMR ${(serviceData['price'] ?? 0)
+                                          .toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF4169E1),
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          _bookService(
+                                              serviceData, doc.id, handymanData,
+                                              handymanId),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                            0xFF4169E1),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 8),
+                                      ),
+                                      child: const Text(
+                                        'Book Now',
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 14),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Reviews Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  serviceData['title'] ?? 'Service',
+                          const Text(
+                            'Customer Reviews',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4169E1).withValues(
+                                  alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                    Icons.star, color: Colors.amber, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${(handymanData['averageRating'] ??
+                                      handymanData['rating'] ?? 0.0)
+                                      .toStringAsFixed(1)}',
                                   style: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF2C3E50),
                                   ),
                                 ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF4169E1).withValues(
-                                      alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  serviceData['category'] ?? '',
-                                  style: const TextStyle(
+                                const SizedBox(width: 4),
+                                Text(
+                                  '(${handymanData['totalReviews'] ??
+                                      handymanData['reviewCount'] ?? 0})',
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: Color(0xFF4169E1),
-                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey[600],
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            serviceData['description'] ?? '',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
+                              ],
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'OMR ${(serviceData['price'] ?? 0)
-                                    .toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF4169E1),
-                                ),
-                              ),
-                              ElevatedButton(
-                                onPressed: () =>
-                                    _bookService(
-                                        serviceData, doc.id, handymanData,
-                                        handymanId),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4169E1),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                ),
-                                child: const Text(
-                                  'Book Now',
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 14),
-                                ),
-                              ),
-                            ],
                           ),
                         ],
                       ),
-                    );
-                  },
+                      const SizedBox(height: 12),
+
+                      // Reviews StreamBuilder
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('reviews')
+                            .where('handyman_id', isEqualTo: handymanId)
+                            .where('status', isEqualTo: 'approved')
+                            .orderBy('created_at', descending: true)
+                            .limit(5)
+                            .snapshots(),
+                        builder: (context, reviewSnapshot) {
+                          if (reviewSnapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(20),
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          }
+
+                          if (!reviewSnapshot.hasData ||
+                              reviewSnapshot.data!.docs.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[200]!),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.rate_review_outlined,
+                                      size: 48, color: Colors.grey[400]),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'No reviews yet',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Be the first to leave a review!',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return Column(
+                            children: reviewSnapshot.data!.docs.map((
+                                reviewDoc) {
+                              final reviewData = reviewDoc.data() as Map<
+                                  String,
+                                  dynamic>;
+                              final rating = reviewData['rating'] ?? 0;
+                              final comment = reviewData['comment'] ?? '';
+                              final userName = reviewData['user_name'] ??
+                                  'Anonymous';
+                              final createdAt = reviewData['created_at'] as Timestamp?;
+                              final category = reviewData['category'] ??
+                                  'General';
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey[200]!),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                          alpha: 0.05),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 18,
+                                          backgroundColor: const Color(
+                                              0xFF4169E1).withValues(
+                                              alpha: 0.1),
+                                          child: Text(
+                                            userName.isNotEmpty ? userName[0]
+                                                .toUpperCase() : 'U',
+                                            style: const TextStyle(
+                                              color: Color(0xFF4169E1),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment
+                                                .start,
+                                            children: [
+                                              Text(
+                                                userName,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF2C3E50),
+                                                ),
+                                              ),
+                                              Text(
+                                                category,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment
+                                              .end,
+                                          children: [
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: List.generate(
+                                                  5, (index) {
+                                                return Icon(
+                                                  index < rating
+                                                      ? Icons.star
+                                                      : Icons.star_border,
+                                                  color: Colors.amber,
+                                                  size: 16,
+                                                );
+                                              }),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              _formatReviewDate(createdAt),
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey[500],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    if (comment.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[50],
+                                          borderRadius: BorderRadius.circular(
+                                              8),
+                                          border: Border.all(
+                                              color: Colors.grey[200]!),
+                                        ),
+                                        child: Text(
+                                          comment,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Color(0xFF2C3E50),
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 );
               },
             ),
@@ -1305,6 +1574,25 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  String _formatReviewDate(Timestamp? timestamp) {
+    if (timestamp == null) return 'Recently';
+    final date = timestamp.toDate();
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays > 30) {
+      return '${date.day}/${date.month}/${date.year}';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   void _bookService(Map<String, dynamic> serviceData, String serviceId,
