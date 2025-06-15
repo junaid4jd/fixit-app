@@ -23,6 +23,21 @@ class _ServiceProviderReviewsScreenState
     _loadAllReviews();
   }
 
+  @override
+  void didUpdateWidget(ServiceProviderReviewsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _loadAllReviews();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Small delay to ensure screen is fully loaded
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) _loadAllReviews();
+    });
+  }
+
   Future<void> _loadAllReviews() async {
     try {
       User? user = FirebaseAuth.instance.currentUser;

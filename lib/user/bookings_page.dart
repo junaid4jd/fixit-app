@@ -317,7 +317,7 @@ class _BookingsPageState extends State<BookingsPage>
             DateTime.now().add(Duration(days: 2))),
         'scheduled_time': '10:00 AM',
         'estimated_cost': 50.0,
-        'status': 'pending',
+        'status': 'approved',
         'created_at': FieldValue.serverTimestamp(),
         'updated_at': FieldValue.serverTimestamp(),
       };
@@ -1316,7 +1316,7 @@ class _RatingDialogState extends State<_RatingDialog> {
         'created_at': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
         // Add this for service provider queries
-        'status': 'pending',
+        'status': 'approved',
         // Reviews need admin approval
         'is_reviewed': true,
       };
@@ -1392,6 +1392,10 @@ class _RatingDialogState extends State<_RatingDialog> {
               'totalReviews': newTotalReviews,
               'reviewCount': newTotalReviews,
               // Add this for service provider profile
+              'rating': newAverageRating,
+              // Also update this field for compatibility
+              'updatedAt': FieldValue.serverTimestamp(),
+              // Force document update
             });
 
             debugPrint('✅ Handyman rating updated successfully');
@@ -1408,7 +1412,7 @@ class _RatingDialogState extends State<_RatingDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-                'Review submitted successfully! It will be visible after admin approval.'),
+                'Review submitted successfully! It is now visible to the service provider.'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 3),
           ),

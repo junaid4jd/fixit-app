@@ -44,6 +44,21 @@ class _ServiceProviderProfilePageState
     _loadStats();
   }
 
+  @override
+  void didUpdateWidget(ServiceProviderProfilePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Refresh data when screen is revisited
+    _loadReviews();
+    _loadStats();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh reviews when screen becomes active
+    _loadReviews();
+  }
+
   Future<void> _loadUserData() async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
@@ -413,6 +428,11 @@ class _ServiceProviderProfilePageState
               }
             },
             icon: Icon(_isEditing ? Icons.save : Icons.edit),
+          ),
+          IconButton(
+            onPressed: _loadReviews,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Reviews',
           ),
         ],
       ),
