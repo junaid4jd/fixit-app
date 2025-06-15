@@ -6,6 +6,8 @@ class AdminStatsService {
   // Calculate comprehensive dashboard statistics with real data
   static Future<Map<String, dynamic>> getDashboardStats() async {
     try {
+      print('🔧 Starting getDashboardStats...');
+
       // Get current month data
       DateTime now = DateTime.now();
       DateTime currentMonthStart = DateTime(now.year, now.month, 1);
@@ -13,24 +15,35 @@ class AdminStatsService {
       DateTime lastMonthEnd = DateTime(now.year, now.month, 1).subtract(
           const Duration(days: 1));
 
+      print(
+          '📅 Date ranges: Current month start: $currentMonthStart, Last month: $lastMonthStart to $lastMonthEnd');
+
       // Get comprehensive user statistics
       Map<String, dynamic> userStats = await _getComprehensiveUserStats(
           currentMonthStart, lastMonthStart, lastMonthEnd);
+      print('👥 User stats loaded: $userStats');
 
       // Get booking statistics  
       Map<String, dynamic> bookingStats = await _getBookingStats(
           currentMonthStart, lastMonthStart, lastMonthEnd);
+      print('📋 Booking stats loaded: $bookingStats');
 
       // Get revenue statistics
       Map<String, dynamic> revenueStats = await _getRevenueStats(
           currentMonthStart, lastMonthStart, lastMonthEnd);
+      print('💰 Revenue stats loaded: $revenueStats');
 
       // Get additional comprehensive stats
       Map<String, dynamic> serviceStats = await _getServiceStats();
-      Map<String, dynamic> reviewStats = await _getReviewStats();
-      Map<String, dynamic> categoryStats = await _getCategoryStats();
+      print('🔧 Service stats loaded: $serviceStats');
 
-      return {
+      Map<String, dynamic> reviewStats = await _getReviewStats();
+      print('⭐ Review stats loaded: $reviewStats');
+
+      Map<String, dynamic> categoryStats = await _getCategoryStats();
+      print('📂 Category stats loaded: $categoryStats');
+
+      final allStats = {
         ...userStats,
         ...bookingStats,
         ...revenueStats,
@@ -38,7 +51,12 @@ class AdminStatsService {
         ...reviewStats,
         ...categoryStats,
       };
+
+      print('✅ Final stats: $allStats');
+      return allStats;
     } catch (e) {
+      print('❌ Error in getDashboardStats: $e');
+      print('Stack trace: ${StackTrace.current}');
       // Return default values if error occurs
       return {
         'totalUsers': 0,
@@ -48,6 +66,7 @@ class AdminStatsService {
         'unverifiedHandymen': 0,
         'pendingVerifications': 0,
         'handymenGrowth': 0.0,
+        'verificationRate': 0.0,
         'totalBookings': 0,
         'pendingBookings': 0,
         'activeBookings': 0,
@@ -55,6 +74,7 @@ class AdminStatsService {
         'cancelledBookings': 0,
         'rejectedBookings': 0,
         'bookingGrowth': 0.0,
+        'completionRate': 0.0,
         'totalRevenue': 0.0,
         'revenueGrowth': 0.0,
         'totalServices': 0,
@@ -68,6 +88,8 @@ class AdminStatsService {
         'averageRating': 0.0,
         'totalCategories': 0,
         'activeCategories': 0,
+        'totalCommission': 0.0,
+        'averageOrderValue': 0.0,
       };
     }
   }
@@ -75,344 +97,489 @@ class AdminStatsService {
   static Future<Map<String, dynamic>> _getComprehensiveUserStats(
       DateTime currentStart,
       DateTime lastStart, DateTime lastEnd) async {
-    // Total users count
-    QuerySnapshot totalUsers = await _firestore.collection('users').get();
+    try {
+      print('🔍 Starting user stats collection...');
 
-    // Regular users (customers)
-    QuerySnapshot customers = await _firestore
-        .collection('users')
-        .where('role', isEqualTo: 'user')
-        .get();
+      // First, let's debug what's in the users collection
+      QuerySnapshot allUsersDebug = await _firestore.collection('users').get();
+      print('👥 Total users in database: ${allUsersDebug.docs.length}');
 
-    // All service providers
-    QuerySnapshot allHandymen = await _firestore
-        .collection('users')
-        .where('role', isEqualTo: 'service_provider')
-        .get();
+      // Debug: Print ALL users to see structure
+      for (int i = 0; i < allUsersDebug.docs.length; i++) {
+        var doc = allUsersDebug.docs[i];
+        var data = doc.data() as Map<String, dynamic>;
+        print('👤 User ${i + 1} (${doc
+            .id}): fullName=${data['fullName']}, role=${data['role']}, isVerified=${data['isVerified']}, verification_status=${data['verification_status']}');
+      }
 
-    // Verified service providers
-    QuerySnapshot verifiedHandymen = await _firestore
-        .collection('users')
-        .where('role', isEqualTo: 'service_provider')
-        .where('isVerified', isEqualTo: true)
-        .get();
+      // Total users count
+      QuerySnapshot totalUsers = await _firestore.collection('users').get();
+      print('👥 Total users query result: ${totalUsers.docs.length}');
 
-    // Unverified service providers
-    QuerySnapshot unverifiedHandymen = await _firestore
-        .collection('users')
-        .where('role', isEqualTo: 'service_provider')
-        .where('isVerified', isEqualTo: false)
-        .get();
+      // Regular users (customers) - simple approach
+      int customerCount = 0;
+      int serviceProviderCount = 0;
+      int verifiedProviderCount = 0;
+      int unverifiedProviderCount = 0;
+      int pendingProviderCount = 0;
 
-    // Pending verification requests (assuming there's a verification_status field)
-    QuerySnapshot pendingVerifications = await _firestore
-        .collection('users')
-        .where('role', isEqualTo: 'service_provider')
-        .where('verification_status', isEqualTo: 'pending')
-        .get();
+      for (var doc in totalUsers.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final role = data['role']?.toString() ?? '';
 
-    // Current month users
-    QuerySnapshot currentUsers = await _firestore
-        .collection('users')
-        .where(
-        'createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(currentStart))
-        .get();
+        if (role == 'user') {
+          customerCount++;
+        } else if (role == 'service_provider') {
+          serviceProviderCount++;
 
-    // Last month users  
-    QuerySnapshot lastUsers = await _firestore
-        .collection('users')
-        .where(
-        'createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(lastStart))
-        .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(lastEnd))
-        .get();
+          final isVerified = data['isVerified'];
+          final verificationStatus = data['verification_status']?.toString() ??
+              '';
 
-    // Current month handymen
-    QuerySnapshot currentHandymen = await _firestore
-        .collection('users')
-        .where('role', isEqualTo: 'service_provider')
-        .where(
-        'createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(currentStart))
-        .get();
+          print(
+              '🔧 Provider analysis: ${data['fullName']} - isVerified: $isVerified, status: $verificationStatus');
 
-    // Last month handymen
-    QuerySnapshot lastHandymen = await _firestore
-        .collection('users')
-        .where('role', isEqualTo: 'service_provider')
-        .where(
-        'createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(lastStart))
-        .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(lastEnd))
-        .get();
+          if (isVerified == true) {
+            verifiedProviderCount++;
+          } else {
+            unverifiedProviderCount++;
+          }
 
-    // Calculate growth percentages
-    double userGrowth = _calculateGrowth(
-        currentUsers.docs.length.toDouble(), lastUsers.docs.length.toDouble());
-    double handymenGrowth = _calculateGrowth(
-        currentHandymen.docs.length.toDouble(),
-        lastHandymen.docs.length.toDouble());
+          if (verificationStatus == 'pending') {
+            pendingProviderCount++;
+          }
+        }
+      }
 
-    return {
-      'totalUsers': totalUsers.docs.length,
-      'totalCustomers': customers.docs.length,
-      'userGrowth': userGrowth,
-      'totalHandymen': allHandymen.docs.length,
-      'verifiedHandymen': verifiedHandymen.docs.length,
-      'unverifiedHandymen': unverifiedHandymen.docs.length,
-      'pendingVerifications': pendingVerifications.docs.length,
-      'handymenGrowth': handymenGrowth,
-      'verificationRate': allHandymen.docs.isEmpty ? 0.0 :
-      (verifiedHandymen.docs.length / allHandymen.docs.length) * 100,
-    };
+      print('📊 Manual count results:');
+      print('  - Total users: ${totalUsers.docs.length}');
+      print('  - Customers: $customerCount');
+      print('  - Service providers: $serviceProviderCount');
+      print('  - Verified providers: $verifiedProviderCount');
+      print('  - Unverified providers: $unverifiedProviderCount');
+      print('  - Pending providers: $pendingProviderCount');
+
+      // Try regular queries for comparison
+      try {
+        QuerySnapshot customers = await _firestore
+            .collection('users')
+            .where('role', isEqualTo: 'user')
+            .get();
+        print('🧑‍💼 Customers (query): ${customers.docs.length}');
+      } catch (e) {
+        print('❌ Error querying customers: $e');
+      }
+
+      try {
+        QuerySnapshot allHandymen = await _firestore
+            .collection('users')
+            .where('role', isEqualTo: 'service_provider')
+            .get();
+        print('🔧 Service providers (query): ${allHandymen.docs.length}');
+      } catch (e) {
+        print('❌ Error querying service providers: $e');
+      }
+
+      // Calculate verification rate
+      double verificationRate = serviceProviderCount > 0 ?
+      (verifiedProviderCount / serviceProviderCount) * 100 : 0.0;
+
+      final result = {
+        'totalUsers': totalUsers.docs.length,
+        'totalCustomers': customerCount,
+        'userGrowth': 0.0, // Simplified for now
+        'totalHandymen': serviceProviderCount,
+        'verifiedHandymen': verifiedProviderCount,
+        'unverifiedHandymen': unverifiedProviderCount,
+        'pendingVerifications': pendingProviderCount,
+        'handymenGrowth': 0.0, // Simplified for now
+        'verificationRate': verificationRate,
+      };
+
+      print('📊 Final user stats result: $result');
+      return result;
+    } catch (e) {
+      print('❌ Error in _getComprehensiveUserStats: $e');
+      print('Stack trace: ${StackTrace.current}');
+      return {
+        'totalUsers': 0,
+        'totalCustomers': 0,
+        'userGrowth': 0.0,
+        'totalHandymen': 0,
+        'verifiedHandymen': 0,
+        'unverifiedHandymen': 0,
+        'pendingVerifications': 0,
+        'handymenGrowth': 0.0,
+        'verificationRate': 0.0,
+      };
+    }
   }
 
   static Future<Map<String, dynamic>> _getBookingStats(DateTime currentStart,
       DateTime lastStart, DateTime lastEnd) async {
-    // Total bookings
-    QuerySnapshot totalBookings = await _firestore.collection('bookings').get();
+    try {
+      // Total bookings
+      QuerySnapshot totalBookings = await _firestore
+          .collection('bookings')
+          .get();
 
-    // Bookings by status
-    QuerySnapshot pendingBookings = await _firestore
-        .collection('bookings')
-        .where('status', isEqualTo: 'pending')
-        .get();
+      // Bookings by status
+      Map<String, int> statusCounts = {
+        'pending': 0,
+        'accepted': 0,
+        'in_progress': 0,
+        'completed': 0,
+        'cancelled': 0,
+        'rejected': 0,
+      };
 
-    QuerySnapshot acceptedBookings = await _firestore
-        .collection('bookings')
-        .where('status', isEqualTo: 'accepted')
-        .get();
+      // Count bookings by status
+      for (var doc in totalBookings.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = data['status']?.toString().toLowerCase() ?? 'unknown';
+        if (statusCounts.containsKey(status)) {
+          statusCounts[status] = statusCounts[status]! + 1;
+        }
+      }
 
-    QuerySnapshot inProgressBookings = await _firestore
-        .collection('bookings')
-        .where('status', isEqualTo: 'in_progress')
-        .get();
+      // Current month bookings
+      QuerySnapshot currentBookings = await _firestore
+          .collection('bookings')
+          .where('created_at',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(currentStart))
+          .get();
 
-    QuerySnapshot completedBookings = await _firestore
-        .collection('bookings')
-        .where('status', isEqualTo: 'completed')
-        .get();
+      // Last month bookings (with error handling)
+      QuerySnapshot lastBookings;
+      try {
+        lastBookings = await _firestore
+            .collection('bookings')
+            .where(
+            'created_at', isGreaterThanOrEqualTo: Timestamp.fromDate(lastStart))
+            .where(
+            'created_at', isLessThanOrEqualTo: Timestamp.fromDate(lastEnd))
+            .get();
+      } catch (e) {
+        print('Error querying last month bookings: $e');
+        lastBookings = await _firestore.collection('bookings').limit(0).get();
+      }
 
-    QuerySnapshot cancelledBookings = await _firestore
-        .collection('bookings')
-        .where('status', isEqualTo: 'cancelled')
-        .get();
+      // Calculate active bookings (accepted + in_progress)
+      int activeBookings = statusCounts['accepted']! +
+          statusCounts['in_progress']!;
 
-    QuerySnapshot rejectedBookings = await _firestore
-        .collection('bookings')
-        .where('status', isEqualTo: 'rejected')
-        .get();
+      // Calculate booking growth
+      double bookingGrowth = _calculateGrowth(
+          currentBookings.docs.length.toDouble(),
+          lastBookings.docs.length.toDouble());
 
-    // Current month bookings
-    QuerySnapshot currentBookings = await _firestore
-        .collection('bookings')
-        .where(
-        'created_at', isGreaterThanOrEqualTo: Timestamp.fromDate(currentStart))
-        .get();
+      // Calculate completion rate
+      double completionRate = totalBookings.docs.isEmpty ? 0.0 :
+      (statusCounts['completed']! / totalBookings.docs.length) * 100;
 
-    // Last month bookings
-    QuerySnapshot lastBookings = await _firestore
-        .collection('bookings')
-        .where(
-        'created_at', isGreaterThanOrEqualTo: Timestamp.fromDate(lastStart))
-        .where('created_at', isLessThanOrEqualTo: Timestamp.fromDate(lastEnd))
-        .get();
-
-    // Calculate active bookings (accepted + in_progress)
-    int activeBookings = acceptedBookings.docs.length +
-        inProgressBookings.docs.length;
-
-    // Calculate booking growth
-    double bookingGrowth = _calculateGrowth(
-        currentBookings.docs.length.toDouble(),
-        lastBookings.docs.length.toDouble());
-
-    // Calculate completion rate
-    double completionRate = totalBookings.docs.isEmpty ? 0.0 :
-    (completedBookings.docs.length / totalBookings.docs.length) * 100;
-
-    return {
-      'totalBookings': totalBookings.docs.length,
-      'pendingBookings': pendingBookings.docs.length,
-      'acceptedBookings': acceptedBookings.docs.length,
-      'activeBookings': activeBookings,
-      'inProgressBookings': inProgressBookings.docs.length,
-      'completedBookings': completedBookings.docs.length,
-      'cancelledBookings': cancelledBookings.docs.length,
-      'rejectedBookings': rejectedBookings.docs.length,
-      'bookingGrowth': bookingGrowth,
-      'completionRate': completionRate,
-      'cancellationRate': totalBookings.docs.isEmpty ? 0.0 :
-      (cancelledBookings.docs.length / totalBookings.docs.length) * 100,
-    };
+      return {
+        'totalBookings': totalBookings.docs.length,
+        'pendingBookings': statusCounts['pending']!,
+        'acceptedBookings': statusCounts['accepted']!,
+        'activeBookings': activeBookings,
+        'inProgressBookings': statusCounts['in_progress']!,
+        'completedBookings': statusCounts['completed']!,
+        'cancelledBookings': statusCounts['cancelled']!,
+        'rejectedBookings': statusCounts['rejected']!,
+        'bookingGrowth': bookingGrowth,
+        'completionRate': completionRate,
+        'cancellationRate': totalBookings.docs.isEmpty ? 0.0 :
+        (statusCounts['cancelled']! / totalBookings.docs.length) * 100,
+      };
+    } catch (e) {
+      print('Error in _getBookingStats: $e');
+      return {
+        'totalBookings': 0,
+        'pendingBookings': 0,
+        'acceptedBookings': 0,
+        'activeBookings': 0,
+        'inProgressBookings': 0,
+        'completedBookings': 0,
+        'cancelledBookings': 0,
+        'rejectedBookings': 0,
+        'bookingGrowth': 0.0,
+        'completionRate': 0.0,
+        'cancellationRate': 0.0,
+      };
+    }
   }
 
   static Future<Map<String, dynamic>> _getRevenueStats(DateTime currentStart,
       DateTime lastStart, DateTime lastEnd) async {
-    // All completed bookings for total revenue
-    QuerySnapshot allCompletedBookings = await _firestore
-        .collection('bookings')
-        .where('status', isEqualTo: 'completed')
-        .get();
+    try {
+      // All completed bookings for total revenue
+      QuerySnapshot allCompletedBookings = await _firestore
+          .collection('bookings')
+          .where('status', isEqualTo: 'completed')
+          .get();
 
-    // Current month completed bookings for revenue
-    QuerySnapshot currentRevenue = await _firestore
-        .collection('bookings')
-        .where('status', isEqualTo: 'completed')
-        .where('completed_at',
-        isGreaterThanOrEqualTo: Timestamp.fromDate(currentStart))
-        .get();
+      // Current month completed bookings for revenue
+      QuerySnapshot currentRevenue = await _firestore
+          .collection('bookings')
+          .where('status', isEqualTo: 'completed')
+          .where('completed_at',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(currentStart))
+          .get();
 
-    // Last month completed bookings for revenue
-    QuerySnapshot lastRevenue = await _firestore
-        .collection('bookings')
-        .where('status', isEqualTo: 'completed')
-        .where(
-        'completed_at', isGreaterThanOrEqualTo: Timestamp.fromDate(lastStart))
-        .where('completed_at', isLessThanOrEqualTo: Timestamp.fromDate(lastEnd))
-        .get();
+      // Last month completed bookings for revenue (with error handling)
+      QuerySnapshot lastRevenue;
+      try {
+        lastRevenue = await _firestore
+            .collection('bookings')
+            .where('status', isEqualTo: 'completed')
+            .where('completed_at',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(lastStart))
+            .where(
+            'completed_at', isLessThanOrEqualTo: Timestamp.fromDate(lastEnd))
+            .get();
+      } catch (e) {
+        print('Error querying last month revenue: $e');
+        lastRevenue = await _firestore.collection('bookings').limit(0).get();
+      }
 
-    // Calculate current month revenue
-    double currentMonthRevenue = 0;
-    for (var doc in currentRevenue.docs) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      currentMonthRevenue +=
-          (data['final_cost'] ?? data['estimated_cost'] ?? 0).toDouble();
+      // Calculate current month revenue
+      double currentMonthRevenue = 0;
+      for (var doc in currentRevenue.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        currentMonthRevenue +=
+            (data['final_cost'] ?? data['estimated_cost'] ?? 0).toDouble();
+      }
+
+      // Calculate last month revenue
+      double lastMonthRevenue = 0;
+      for (var doc in lastRevenue.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        lastMonthRevenue +=
+            (data['final_cost'] ?? data['estimated_cost'] ?? 0).toDouble();
+      }
+
+      // Calculate total revenue
+      double totalRevenue = 0;
+      double totalCommission = 0;
+      const double commissionRate = 0.05; // 5% commission rate
+
+      for (var doc in allCompletedBookings.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        double amount = (data['final_cost'] ?? data['estimated_cost'] ?? 0)
+            .toDouble();
+        totalRevenue += amount;
+        totalCommission += amount * commissionRate;
+      }
+
+      // Calculate average order value
+      double averageOrderValue = allCompletedBookings.docs.isEmpty ? 0.0 :
+      totalRevenue / allCompletedBookings.docs.length;
+
+      // Calculate growth
+      double revenueGrowth = _calculateGrowth(
+          currentMonthRevenue, lastMonthRevenue);
+
+      return {
+        'totalRevenue': totalRevenue,
+        'currentMonthRevenue': currentMonthRevenue,
+        'lastMonthRevenue': lastMonthRevenue,
+        'totalCommission': totalCommission,
+        'averageOrderValue': averageOrderValue,
+        'revenueGrowth': revenueGrowth,
+      };
+    } catch (e) {
+      print('Error in _getRevenueStats: $e');
+      return {
+        'totalRevenue': 0.0,
+        'currentMonthRevenue': 0.0,
+        'lastMonthRevenue': 0.0,
+        'totalCommission': 0.0,
+        'averageOrderValue': 0.0,
+        'revenueGrowth': 0.0,
+      };
     }
-
-    // Calculate last month revenue
-    double lastMonthRevenue = 0;
-    for (var doc in lastRevenue.docs) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      lastMonthRevenue +=
-          (data['final_cost'] ?? data['estimated_cost'] ?? 0).toDouble();
-    }
-
-    // Calculate total revenue
-    double totalRevenue = 0;
-    double totalCommission = 0;
-    const double commissionRate = 0.05; // 5% commission rate
-
-    for (var doc in allCompletedBookings.docs) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      double amount = (data['final_cost'] ?? data['estimated_cost'] ?? 0)
-          .toDouble();
-      totalRevenue += amount;
-      totalCommission += amount * commissionRate;
-    }
-
-    // Calculate average order value
-    double averageOrderValue = allCompletedBookings.docs.isEmpty ? 0.0 :
-    totalRevenue / allCompletedBookings.docs.length;
-
-    // Calculate growth
-    double revenueGrowth = _calculateGrowth(
-        currentMonthRevenue, lastMonthRevenue);
-
-    return {
-      'totalRevenue': totalRevenue,
-      'currentMonthRevenue': currentMonthRevenue,
-      'lastMonthRevenue': lastMonthRevenue,
-      'totalCommission': totalCommission,
-      'averageOrderValue': averageOrderValue,
-      'revenueGrowth': revenueGrowth,
-    };
   }
 
   static Future<Map<String, dynamic>> _getServiceStats() async {
-    // Total services
-    QuerySnapshot totalServices = await _firestore
-        .collection('handyman_services')
-        .get();
+    try {
+      // Check if handyman_services collection exists and has documents
+      QuerySnapshot totalServices = await _firestore
+          .collection('handyman_services')
+          .limit(1)
+          .get();
 
-    // Services by approval status
-    QuerySnapshot approvedServices = await _firestore
-        .collection('handyman_services')
-        .where('approval_status', isEqualTo: 'approved')
-        .get();
+      if (totalServices.docs.isEmpty) {
+        // Collection doesn't exist or is empty, return zeros
+        return {
+          'totalServices': 0,
+          'approvedServices': 0,
+          'pendingServices': 0,
+          'rejectedServices': 0,
+          'activeServices': 0,
+          'serviceApprovalRate': 0.0,
+        };
+      }
 
-    QuerySnapshot pendingServices = await _firestore
-        .collection('handyman_services')
-        .where('approval_status', isEqualTo: 'pending')
-        .get();
+      // Get all services
+      QuerySnapshot allServices = await _firestore
+          .collection('handyman_services')
+          .get();
 
-    QuerySnapshot rejectedServices = await _firestore
-        .collection('handyman_services')
-        .where('approval_status', isEqualTo: 'rejected')
-        .get();
+      // Count services by status
+      Map<String, int> statusCounts = {
+        'approved': 0,
+        'pending': 0,
+        'rejected': 0,
+        'active': 0,
+      };
 
-    // Active services
-    QuerySnapshot activeServices = await _firestore
-        .collection('handyman_services')
-        .where('approval_status', isEqualTo: 'approved')
-        .where('is_active', isEqualTo: true)
-        .get();
+      for (var doc in allServices.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final approvalStatus = data['approval_status']
+            ?.toString()
+            .toLowerCase();
+        final isActive = data['is_active'] == true;
 
-    double approvalRate = totalServices.docs.isEmpty ? 0.0 :
-    (approvedServices.docs.length / totalServices.docs.length) * 100;
+        if (approvalStatus == 'approved')
+          statusCounts['approved'] = statusCounts['approved']! + 1;
+        if (approvalStatus == 'pending')
+          statusCounts['pending'] = statusCounts['pending']! + 1;
+        if (approvalStatus == 'rejected')
+          statusCounts['rejected'] = statusCounts['rejected']! + 1;
+        if (isActive && approvalStatus == 'approved')
+          statusCounts['active'] = statusCounts['active']! + 1;
+      }
 
-    return {
-      'totalServices': totalServices.docs.length,
-      'approvedServices': approvedServices.docs.length,
-      'pendingServices': pendingServices.docs.length,
-      'rejectedServices': rejectedServices.docs.length,
-      'activeServices': activeServices.docs.length,
-      'serviceApprovalRate': approvalRate,
-    };
+      double approvalRate = allServices.docs.isEmpty ? 0.0 :
+      (statusCounts['approved']! / allServices.docs.length) * 100;
+
+      return {
+        'totalServices': allServices.docs.length,
+        'approvedServices': statusCounts['approved']!,
+        'pendingServices': statusCounts['pending']!,
+        'rejectedServices': statusCounts['rejected']!,
+        'activeServices': statusCounts['active']!,
+        'serviceApprovalRate': approvalRate,
+      };
+    } catch (e) {
+      print('Error in _getServiceStats: $e');
+      return {
+        'totalServices': 0,
+        'approvedServices': 0,
+        'pendingServices': 0,
+        'rejectedServices': 0,
+        'activeServices': 0,
+        'serviceApprovalRate': 0.0,
+      };
+    }
   }
 
   static Future<Map<String, dynamic>> _getReviewStats() async {
-    // Total reviews
-    QuerySnapshot totalReviews = await _firestore
-        .collection('reviews')
-        .get();
+    try {
+      // Check if reviews collection exists
+      QuerySnapshot testReviews = await _firestore
+          .collection('reviews')
+          .limit(1)
+          .get();
 
-    // Reviews by status
-    QuerySnapshot pendingReviews = await _firestore
-        .collection('reviews')
-        .where('status', isEqualTo: 'pending')
-        .get();
-
-    QuerySnapshot approvedReviews = await _firestore
-        .collection('reviews')
-        .where('status', isEqualTo: 'approved')
-        .get();
-
-    // Calculate average rating
-    double totalRating = 0;
-    int ratingCount = 0;
-
-    for (var doc in approvedReviews.docs) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      if (data['rating'] != null) {
-        totalRating += (data['rating'] as num).toDouble();
-        ratingCount++;
+      if (testReviews.docs.isEmpty) {
+        return {
+          'totalReviews': 0,
+          'pendingReviews': 0,
+          'approvedReviews': 0,
+          'averageRating': 0.0,
+        };
       }
+
+      // Total reviews
+      QuerySnapshot totalReviews = await _firestore
+          .collection('reviews')
+          .get();
+
+      // Count reviews by status
+      Map<String, int> statusCounts = {
+        'pending': 0,
+        'approved': 0,
+      };
+
+      double totalRating = 0;
+      int ratingCount = 0;
+
+      for (var doc in totalReviews.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = data['status']?.toString().toLowerCase() ?? 'approved';
+
+        if (status == 'pending')
+          statusCounts['pending'] = statusCounts['pending']! + 1;
+        if (status == 'approved')
+          statusCounts['approved'] = statusCounts['approved']! + 1;
+
+        // Calculate average rating from approved reviews
+        if (status == 'approved' && data['rating'] != null) {
+          totalRating += (data['rating'] as num).toDouble();
+          ratingCount++;
+        }
+      }
+
+      double averageRating = ratingCount > 0 ? totalRating / ratingCount : 0.0;
+
+      return {
+        'totalReviews': totalReviews.docs.length,
+        'pendingReviews': statusCounts['pending']!,
+        'approvedReviews': statusCounts['approved']!,
+        'averageRating': averageRating,
+      };
+    } catch (e) {
+      print('Error in _getReviewStats: $e');
+      return {
+        'totalReviews': 0,
+        'pendingReviews': 0,
+        'approvedReviews': 0,
+        'averageRating': 0.0,
+      };
     }
-
-    double averageRating = ratingCount > 0 ? totalRating / ratingCount : 0.0;
-
-    return {
-      'totalReviews': totalReviews.docs.length,
-      'pendingReviews': pendingReviews.docs.length,
-      'approvedReviews': approvedReviews.docs.length,
-      'averageRating': averageRating,
-    };
   }
 
   static Future<Map<String, dynamic>> _getCategoryStats() async {
-    // Total categories
-    QuerySnapshot totalCategories = await _firestore
-        .collection('service_categories')
-        .get();
+    try {
+      // Check if categories collection exists
+      QuerySnapshot testCategories = await _firestore
+          .collection('categories')
+          .limit(1)
+          .get();
 
-    // Active categories
-    QuerySnapshot activeCategories = await _firestore
-        .collection('service_categories')
-        .where('is_active', isEqualTo: true)
-        .get();
+      if (testCategories.docs.isEmpty) {
+        return {
+          'totalCategories': 0,
+          'activeCategories': 0,
+        };
+      }
 
-    return {
-      'totalCategories': totalCategories.docs.length,
-      'activeCategories': activeCategories.docs.length,
-    };
+      // Total categories
+      QuerySnapshot totalCategories = await _firestore
+          .collection('categories')
+          .get();
+
+      // Count active categories
+      int activeCount = 0;
+      for (var doc in totalCategories.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['isActive'] == true) {
+          activeCount++;
+        }
+      }
+
+      return {
+        'totalCategories': totalCategories.docs.length,
+        'activeCategories': activeCount,
+      };
+    } catch (e) {
+      print('Error in _getCategoryStats: $e');
+      return {
+        'totalCategories': 0,
+        'activeCategories': 0,
+      };
+    }
   }
 
   // Get detailed analytics for admin dashboard
@@ -471,6 +638,7 @@ class AdminStatsService {
         'yearlyUsers': yearlyUsers.docs.length,
       };
     } catch (e) {
+      print('Error in getDetailedAnalytics: $e');
       return {
         'weeklyBookings': 0,
         'weeklyUsers': 0,

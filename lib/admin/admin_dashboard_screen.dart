@@ -11,6 +11,7 @@ import 'content_management_screen.dart';
 import 'service_approval_screen.dart';
 import '../services/admin_stats_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -86,6 +87,218 @@ class _AdminOverviewState extends State<AdminOverview> {
   List<Map<String, dynamic>> _recentActivities = [];
   bool _isLoading = true;
 
+  Future<void> _createTestServiceProviders() async {
+    try {
+      print('🔧 Creating test service providers...');
+
+      // First, let's check what's currently in the database
+      QuerySnapshot existingUsers = await firestore.FirebaseFirestore.instance
+          .collection('users').get();
+      print('📊 Current users in database: ${existingUsers.docs.length}');
+
+      for (var doc in existingUsers.docs) {
+        var data = doc.data() as Map<String, dynamic>;
+        print(
+            '👤 Existing user: ${data['fullName']} - role: ${data['role']} - verified: ${data['isVerified']}');
+      }
+
+      // Create test service providers with different verification statuses
+      final testProviders = [
+        {
+          'fullName': 'Ahmed Al-Rashid',
+          'email': 'ahmed.plumber@example.com',
+          'role': 'service_provider',
+          'isVerified': true,
+          'verification_status': 'approved',
+          'createdAt': firestore.FieldValue.serverTimestamp(),
+          'verifiedAt': firestore.FieldValue.serverTimestamp(),
+          'primaryCategory': 'Plumbing',
+          'services': ['Plumbing', 'Pipe Repair'],
+          'phoneNumber': '+968 9876 5432',
+          'city': 'Muscat',
+          'averageRating': 4.5,
+          'totalReviews': 12,
+          'isActive': true,
+        },
+        {
+          'fullName': 'Khalid Al-Mansouri',
+          'email': 'khalid.electric@example.com',
+          'role': 'service_provider',
+          'isVerified': true,
+          'verification_status': 'approved',
+          'createdAt': firestore.FieldValue.serverTimestamp(),
+          'verifiedAt': firestore.FieldValue.serverTimestamp(),
+          'primaryCategory': 'Electrical',
+          'services': ['Electrical', 'Wiring'],
+          'phoneNumber': '+968 9876 5433',
+          'city': 'Muscat',
+          'averageRating': 4.8,
+          'totalReviews': 20,
+          'isActive': true,
+        },
+        {
+          'fullName': 'Saeed Al-Balushi',
+          'email': 'saeed.ac@example.com',
+          'role': 'service_provider',
+          'isVerified': false,
+          'verification_status': 'pending',
+          'createdAt': firestore.FieldValue.serverTimestamp(),
+          'primaryCategory': 'AC Repair',
+          'services': ['AC Repair', 'HVAC'],
+          'phoneNumber': '+968 9876 5434',
+          'city': 'Salalah',
+          'averageRating': 0.0,
+          'totalReviews': 0,
+          'isActive': true,
+        },
+        {
+          'fullName': 'Omar Al-Hinai',
+          'email': 'omar.carpenter@example.com',
+          'role': 'service_provider',
+          'isVerified': false,
+          'verification_status': 'pending',
+          'createdAt': firestore.FieldValue.serverTimestamp(),
+          'primaryCategory': 'Carpentry',
+          'services': ['Carpentry', 'Furniture Repair'],
+          'phoneNumber': '+968 9876 5435',
+          'city': 'Nizwa',
+          'averageRating': 0.0,
+          'totalReviews': 0,
+          'isActive': true,
+        },
+        {
+          'fullName': 'Hassan Al-Kindi',
+          'email': 'hassan.painter@example.com',
+          'role': 'service_provider',
+          'isVerified': true,
+          'verification_status': 'approved',
+          'createdAt': firestore.FieldValue.serverTimestamp(),
+          'verifiedAt': firestore.FieldValue.serverTimestamp(),
+          'primaryCategory': 'Painting',
+          'services': ['Painting', 'Wall Decoration'],
+          'phoneNumber': '+968 9876 5436',
+          'city': 'Sohar',
+          'averageRating': 4.2,
+          'totalReviews': 8,
+          'isActive': true,
+        }
+      ];
+
+      for (int i = 0; i < testProviders.length; i++) {
+        DocumentReference docRef = await firestore.FirebaseFirestore.instance
+            .collection('users').add(testProviders[i]);
+        print('✅ Created test provider ${i +
+            1}: ${testProviders[i]['fullName']} with ID: ${docRef.id}');
+
+        // Immediately verify it was created
+        DocumentSnapshot verifyDoc = await docRef.get();
+        if (verifyDoc.exists) {
+          var verifyData = verifyDoc.data() as Map<String, dynamic>;
+          print(
+              '✅ Verified creation: ${verifyData['fullName']} - role: ${verifyData['role']} - verified: ${verifyData['isVerified']}');
+        }
+      }
+
+      // Also create some test users (customers)
+      final testUsers = [
+        {
+          'fullName': 'Fatima Al-Zahra',
+          'email': 'fatima.customer@example.com',
+          'role': 'user',
+          'isVerified': true,
+          'createdAt': firestore.FieldValue.serverTimestamp(),
+          'phoneNumber': '+968 9111 1111',
+          'city': 'Muscat',
+          'totalBookings': 3,
+        },
+        {
+          'fullName': 'Mohammed Al-Said',
+          'email': 'mohammed.customer@example.com',
+          'role': 'user',
+          'isVerified': true,
+          'createdAt': firestore.FieldValue.serverTimestamp(),
+          'phoneNumber': '+968 9222 2222',
+          'city': 'Muscat',
+          'totalBookings': 1,
+        }
+      ];
+
+      for (int i = 0; i < testUsers.length; i++) {
+        DocumentReference docRef = await firestore.FirebaseFirestore.instance
+            .collection('users').add(testUsers[i]);
+        print('✅ Created test user ${i +
+            1}: ${testUsers[i]['fullName']} with ID: ${docRef.id}');
+      }
+
+      print('🎉 All test data created successfully!');
+
+      // Wait a moment for Firestore to sync
+      await Future.delayed(Duration(seconds: 2));
+
+      // Now check the database again
+      QuerySnapshot afterUsers = await firestore.FirebaseFirestore.instance
+          .collection('users').get();
+      print('📊 Users after creation: ${afterUsers.docs.length}');
+
+      for (var doc in afterUsers.docs) {
+        var data = doc.data() as Map<String, dynamic>;
+        print(
+            '👤 User after creation: ${data['fullName']} - role: ${data['role']} - verified: ${data['isVerified']}');
+      }
+
+      // Manually trigger stats refresh
+      print('🔄 Refreshing dashboard stats...');
+      await _loadDashboardData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                '✅ Test service providers and users created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error creating test providers: $e');
+      print('❌ Stack trace: ${StackTrace.current}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error creating test providers: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _testStatsDirectly() async {
+    try {
+      print('📊 Testing stats service directly...');
+      Map<String, dynamic> stats = await AdminStatsService.getDashboardStats();
+      print('📊 Raw stats from service: $stats');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Stats test completed. See console for details.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error testing stats service: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error testing stats service: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -124,7 +337,7 @@ class _AdminOverviewState extends State<AdminOverview> {
 
     try {
       // Get recent user registrations
-      QuerySnapshot recentUsers = await FirebaseFirestore.instance
+      QuerySnapshot recentUsers = await firestore.FirebaseFirestore.instance
           .collection('users')
           .orderBy('createdAt', descending: true)
           .limit(3)
@@ -136,13 +349,14 @@ class _AdminOverviewState extends State<AdminOverview> {
           'icon': Icons.person_add,
           'title': 'New User Registration',
           'subtitle': '${userData['fullName'] ?? 'User'} joined the platform',
-          'time': _getTimeAgo(userData['createdAt'] as Timestamp?),
+          'time': _getTimeAgo(userData['createdAt'] as firestore.Timestamp?),
           'color': Colors.green,
         });
       }
 
       // Get recent verifications
-      QuerySnapshot recentVerifications = await FirebaseFirestore.instance
+      QuerySnapshot recentVerifications = await firestore.FirebaseFirestore
+          .instance
           .collection('users')
           .where('role', isEqualTo: 'service_provider')
           .where('isVerified', isEqualTo: true)
@@ -157,13 +371,13 @@ class _AdminOverviewState extends State<AdminOverview> {
           'title': 'Service Provider Verified',
           'subtitle': '${userData['fullName'] ??
               'Provider'} verified successfully',
-          'time': _getTimeAgo(userData['verifiedAt'] as Timestamp?),
+          'time': _getTimeAgo(userData['verifiedAt'] as firestore.Timestamp?),
           'color': const Color(0xFF4169E1),
         });
       }
 
       // Get recent bookings
-      QuerySnapshot recentBookings = await FirebaseFirestore.instance
+      QuerySnapshot recentBookings = await firestore.FirebaseFirestore.instance
           .collection('bookings')
           .orderBy('created_at', descending: true)
           .limit(2)
@@ -175,13 +389,14 @@ class _AdminOverviewState extends State<AdminOverview> {
           'icon': Icons.work,
           'title': 'New Service Request',
           'subtitle': '${bookingData['category'] ?? 'Service'} booking created',
-          'time': _getTimeAgo(bookingData['created_at'] as Timestamp?),
+          'time': _getTimeAgo(
+              bookingData['created_at'] as firestore.Timestamp?),
           'color': Colors.orange,
         });
       }
 
       // Get recent completed payments
-      QuerySnapshot recentPayments = await FirebaseFirestore.instance
+      QuerySnapshot recentPayments = await firestore.FirebaseFirestore.instance
           .collection('bookings')
           .where('status', isEqualTo: 'completed')
           .orderBy('completed_at', descending: true)
@@ -196,7 +411,8 @@ class _AdminOverviewState extends State<AdminOverview> {
           'icon': Icons.payment,
           'title': 'Payment Processed',
           'subtitle': 'Payment of ${amount.toStringAsFixed(3)} OMR completed',
-          'time': _getTimeAgo(bookingData['completed_at'] as Timestamp?),
+          'time': _getTimeAgo(
+              bookingData['completed_at'] as firestore.Timestamp?),
           'color': Colors.green,
         });
       }
@@ -214,7 +430,7 @@ class _AdminOverviewState extends State<AdminOverview> {
     }
   }
 
-  String _getTimeAgo(Timestamp? timestamp) {
+  String _getTimeAgo(firestore.Timestamp? timestamp) {
     if (timestamp == null) return 'Recently';
 
     final now = DateTime.now();
@@ -328,13 +544,15 @@ class _AdminOverviewState extends State<AdminOverview> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 15,
                 mainAxisSpacing: 15,
-                childAspectRatio: 1.2,
+                childAspectRatio: 1.3,
+                // Increased from 1.2 to give more height
                 children: [
                   _buildStatCard(
                     title: 'Total Users',
                     value: '${_dashboardStats['totalUsers'] ?? 0}',
                     icon: Icons.people,
                     color: const Color(0xFF3498DB),
+                    // Blue
                     change: AdminStatsService.formatGrowth(
                         _dashboardStats['userGrowth'] ?? 0.0),
                   ),
@@ -343,6 +561,7 @@ class _AdminOverviewState extends State<AdminOverview> {
                     value: '${_dashboardStats['verifiedHandymen'] ?? 0}',
                     icon: Icons.verified,
                     color: const Color(0xFF2ECC71),
+                    // Green
                     change: AdminStatsService.formatPercentage(
                         _dashboardStats['verificationRate'] ?? 0.0),
                   ),
@@ -351,6 +570,7 @@ class _AdminOverviewState extends State<AdminOverview> {
                     value: '${_dashboardStats['activeBookings'] ?? 0}',
                     icon: Icons.work,
                     color: const Color(0xFFE67E22),
+                    // Orange
                     change: AdminStatsService.formatGrowth(
                         _dashboardStats['bookingGrowth'] ?? 0.0),
                   ),
@@ -360,6 +580,7 @@ class _AdminOverviewState extends State<AdminOverview> {
                         _dashboardStats['totalRevenue']?.toDouble() ?? 0.0),
                     icon: Icons.attach_money,
                     color: const Color(0xFF9B59B6),
+                    // Purple
                     change: AdminStatsService.formatGrowth(
                         _dashboardStats['revenueGrowth'] ?? 0.0),
                   ),
@@ -387,7 +608,8 @@ class _AdminOverviewState extends State<AdminOverview> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 15,
                 mainAxisSpacing: 15,
-                childAspectRatio: 1.2,
+                childAspectRatio: 1.3,
+                // Increased from 1.2 to give more height
                 children: [
                   _buildStatCard(
                     title: 'Pending Approvals',
@@ -402,6 +624,7 @@ class _AdminOverviewState extends State<AdminOverview> {
                     value: '${_dashboardStats['completedBookings'] ?? 0}',
                     icon: Icons.check_circle,
                     color: const Color(0xFF27AE60),
+                    // Emerald
                     change: AdminStatsService.formatPercentage(
                         _dashboardStats['completionRate'] ?? 0.0),
                   ),
@@ -410,6 +633,7 @@ class _AdminOverviewState extends State<AdminOverview> {
                     value: '${_dashboardStats['totalReviews'] ?? 0}',
                     icon: Icons.star,
                     color: const Color(0xFFE74C3C),
+                    // Red
                     change: '${(_dashboardStats['averageRating'] ?? 0.0)
                         .toStringAsFixed(1)} avg',
                   ),
@@ -419,6 +643,7 @@ class _AdminOverviewState extends State<AdminOverview> {
                         _dashboardStats['totalCommission']?.toDouble() ?? 0.0),
                     icon: Icons.account_balance,
                     color: const Color(0xFF8E44AD),
+                    // Deep Purple
                     change: AdminStatsService.formatCurrency(
                         _dashboardStats['averageOrderValue']?.toDouble() ??
                             0.0),
@@ -529,6 +754,38 @@ class _AdminOverviewState extends State<AdminOverview> {
               ),
 
               const SizedBox(height: 15),
+
+              // Add debug button for test data
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 15),
+                child: ElevatedButton.icon(
+                  onPressed: _createTestServiceProviders,
+                  icon: const Icon(Icons.add_business),
+                  label: const Text('Create Test Service Providers'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+
+              // Add debug button to test stats directly
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 15),
+                child: ElevatedButton.icon(
+                  onPressed: _testStatsDirectly,
+                  icon: const Icon(Icons.analytics),
+                  label: const Text('Test Stats Directly'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
 
               Row(
                 children: [
@@ -842,9 +1099,21 @@ class _AdminOverviewState extends State<AdminOverview> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color,
+            color.withValues(alpha: 0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
@@ -854,19 +1123,20 @@ class _AdminOverviewState extends State<AdminOverview> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
-                  color: color,
+                  color: Colors.white,
                   size: 22,
                 ),
               ),
@@ -874,35 +1144,47 @@ class _AdminOverviewState extends State<AdminOverview> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: growthColor.withValues(alpha: 0.1),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   change,
-                  style: TextStyle(
-                    color: growthColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF7F8C8D),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],
@@ -1136,8 +1418,119 @@ class _AdminOverviewState extends State<AdminOverview> {
   }
 }
 
-class SystemSettings extends StatelessWidget {
+class SystemSettings extends StatefulWidget {
   const SystemSettings({super.key});
+
+  @override
+  State<SystemSettings> createState() => _SystemSettingsState();
+}
+
+class _SystemSettingsState extends State<SystemSettings> {
+  // Settings state variables
+  bool _maintenanceMode = false;
+  bool _newUserRegistration = true;
+  bool _emailNotifications = true;
+  bool _pushNotifications = true;
+  bool _smsNotifications = false;
+  bool _autoApproveBookings = false;
+  bool _requireIdVerification = true;
+  bool _allowGuestBookings = false;
+
+  double _platformCommissionRate = 5.0;
+  double _cancellationFee = 2.5;
+  int _bookingTimeoutMinutes = 30;
+  int _maxBookingsPerDay = 10;
+
+  String _defaultCurrency = 'OMR';
+  String _defaultLanguage = 'English';
+  String _supportEmail = 'support@fixitoman.com';
+  String _supportPhone = '+968 2234 5678';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    // Load settings from Firestore
+    try {
+      DocumentSnapshot settingsDoc = await FirebaseFirestore.instance
+          .collection('settings')
+          .doc('app_config')
+          .get();
+
+      if (settingsDoc.exists) {
+        Map<String, dynamic> data = settingsDoc.data() as Map<String, dynamic>;
+        setState(() {
+          _maintenanceMode = data['maintenanceMode'] ?? false;
+          _newUserRegistration = data['newUserRegistration'] ?? true;
+          _emailNotifications = data['emailNotifications'] ?? true;
+          _pushNotifications = data['pushNotifications'] ?? true;
+          _smsNotifications = data['smsNotifications'] ?? false;
+          _autoApproveBookings = data['autoApproveBookings'] ?? false;
+          _requireIdVerification = data['requireIdVerification'] ?? true;
+          _allowGuestBookings = data['allowGuestBookings'] ?? false;
+          _platformCommissionRate =
+              data['platformCommissionRate']?.toDouble() ?? 5.0;
+          _cancellationFee = data['cancellationFee']?.toDouble() ?? 2.5;
+          _bookingTimeoutMinutes = data['bookingTimeoutMinutes'] ?? 30;
+          _maxBookingsPerDay = data['maxBookingsPerDay'] ?? 10;
+          _defaultCurrency = data['defaultCurrency'] ?? 'OMR';
+          _defaultLanguage = data['defaultLanguage'] ?? 'English';
+          _supportEmail = data['supportEmail'] ?? 'support@fixitoman.com';
+          _supportPhone = data['supportPhone'] ?? '+968 2234 5678';
+        });
+      }
+    } catch (e) {
+      print('Error loading settings: $e');
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('settings')
+          .doc('app_config')
+          .set({
+        'maintenanceMode': _maintenanceMode,
+        'newUserRegistration': _newUserRegistration,
+        'emailNotifications': _emailNotifications,
+        'pushNotifications': _pushNotifications,
+        'smsNotifications': _smsNotifications,
+        'autoApproveBookings': _autoApproveBookings,
+        'requireIdVerification': _requireIdVerification,
+        'allowGuestBookings': _allowGuestBookings,
+        'platformCommissionRate': _platformCommissionRate,
+        'cancellationFee': _cancellationFee,
+        'bookingTimeoutMinutes': _bookingTimeoutMinutes,
+        'maxBookingsPerDay': _maxBookingsPerDay,
+        'defaultCurrency': _defaultCurrency,
+        'defaultLanguage': _defaultLanguage,
+        'supportEmail': _supportEmail,
+        'supportPhone': _supportPhone,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Settings saved successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error saving settings: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1151,35 +1544,540 @@ class SystemSettings extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF2C3E50),
         elevation: 0,
+        actions: [
+          TextButton.icon(
+            onPressed: _saveSettings,
+            icon: const Icon(Icons.save, size: 18),
+            label: const Text('Save'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF4169E1),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
-      body: const Center(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.settings,
-              size: 64,
+            // App Status Section
+            _buildSectionCard(
+              title: 'App Status',
+              icon: Icons.power_settings_new,
+              color: const Color(0xFFE74C3C),
+              children: [
+                _buildSwitchTile(
+                  title: 'Maintenance Mode',
+                  subtitle: 'Temporarily disable app for maintenance',
+                  value: _maintenanceMode,
+                  onChanged: (value) {
+                    setState(() {
+                      _maintenanceMode = value;
+                    });
+                  },
+                  icon: Icons.build_circle,
+                  color: Colors.orange,
+                ),
+                _buildSwitchTile(
+                  title: 'New User Registration',
+                  subtitle: 'Allow new users to create accounts',
+                  value: _newUserRegistration,
+                  onChanged: (value) {
+                    setState(() {
+                      _newUserRegistration = value;
+                    });
+                  },
+                  icon: Icons.person_add,
+                  color: Colors.green,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Notifications Section
+            _buildSectionCard(
+              title: 'Notifications',
+              icon: Icons.notifications,
+              color: const Color(0xFF3498DB),
+              children: [
+                _buildSwitchTile(
+                  title: 'Email Notifications',
+                  subtitle: 'Send notifications via email',
+                  value: _emailNotifications,
+                  onChanged: (value) {
+                    setState(() {
+                      _emailNotifications = value;
+                    });
+                  },
+                  icon: Icons.email,
+                  color: Colors.blue,
+                ),
+                _buildSwitchTile(
+                  title: 'Push Notifications',
+                  subtitle: 'Send push notifications to mobile devices',
+                  value: _pushNotifications,
+                  onChanged: (value) {
+                    setState(() {
+                      _pushNotifications = value;
+                    });
+                  },
+                  icon: Icons.phone_android,
+                  color: Colors.green,
+                ),
+                _buildSwitchTile(
+                  title: 'SMS Notifications',
+                  subtitle: 'Send notifications via SMS',
+                  value: _smsNotifications,
+                  onChanged: (value) {
+                    setState(() {
+                      _smsNotifications = value;
+                    });
+                  },
+                  icon: Icons.sms,
+                  color: Colors.orange,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Booking Settings Section
+            _buildSectionCard(
+              title: 'Booking Settings',
+              icon: Icons.book_online,
+              color: const Color(0xFF9B59B6),
+              children: [
+                _buildSwitchTile(
+                  title: 'Auto-approve Bookings',
+                  subtitle: 'Automatically approve new booking requests',
+                  value: _autoApproveBookings,
+                  onChanged: (value) {
+                    setState(() {
+                      _autoApproveBookings = value;
+                    });
+                  },
+                  icon: Icons.auto_mode,
+                  color: Colors.purple,
+                ),
+                _buildSwitchTile(
+                  title: 'Require ID Verification',
+                  subtitle: 'Require service providers to verify their identity',
+                  value: _requireIdVerification,
+                  onChanged: (value) {
+                    setState(() {
+                      _requireIdVerification = value;
+                    });
+                  },
+                  icon: Icons.verified_user,
+                  color: Colors.green,
+                ),
+                _buildSwitchTile(
+                  title: 'Allow Guest Bookings',
+                  subtitle: 'Allow users to book services without registration',
+                  value: _allowGuestBookings,
+                  onChanged: (value) {
+                    setState(() {
+                      _allowGuestBookings = value;
+                    });
+                  },
+                  icon: Icons.person_outline,
+                  color: Colors.grey,
+                ),
+                const SizedBox(height: 16),
+                _buildSliderTile(
+                  title: 'Booking Timeout (Minutes)',
+                  subtitle: 'Time before pending bookings expire',
+                  value: _bookingTimeoutMinutes.toDouble(),
+                  min: 15,
+                  max: 120,
+                  divisions: 21,
+                  onChanged: (value) {
+                    setState(() {
+                      _bookingTimeoutMinutes = value.round();
+                    });
+                  },
+                  icon: Icons.timer,
+                  color: Colors.orange,
+                ),
+                _buildSliderTile(
+                  title: 'Max Bookings Per Day',
+                  subtitle: 'Maximum bookings per user per day',
+                  value: _maxBookingsPerDay.toDouble(),
+                  min: 1,
+                  max: 20,
+                  divisions: 19,
+                  onChanged: (value) {
+                    setState(() {
+                      _maxBookingsPerDay = value.round();
+                    });
+                  },
+                  icon: Icons.today,
+                  color: Colors.blue,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Financial Settings Section
+            _buildSectionCard(
+              title: 'Financial Settings',
+              icon: Icons.attach_money,
+              color: const Color(0xFF2ECC71),
+              children: [
+                _buildSliderTile(
+                  title: 'Platform Commission Rate (%)',
+                  subtitle: 'Commission rate charged on completed bookings',
+                  value: _platformCommissionRate,
+                  min: 0,
+                  max: 20,
+                  divisions: 40,
+                  onChanged: (value) {
+                    setState(() {
+                      _platformCommissionRate = value;
+                    });
+                  },
+                  icon: Icons.percent,
+                  color: Colors.green,
+                ),
+                _buildSliderTile(
+                  title: 'Cancellation Fee (OMR)',
+                  subtitle: 'Fee charged for booking cancellations',
+                  value: _cancellationFee,
+                  min: 0,
+                  max: 10,
+                  divisions: 20,
+                  onChanged: (value) {
+                    setState(() {
+                      _cancellationFee = value;
+                    });
+                  },
+                  icon: Icons.money_off,
+                  color: Colors.red,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // General Settings Section
+            _buildSectionCard(
+              title: 'General Settings',
+              icon: Icons.settings,
+              color: const Color(0xFF34495E),
+              children: [
+                _buildDropdownTile(
+                  title: 'Default Currency',
+                  subtitle: 'Primary currency for the platform',
+                  value: _defaultCurrency,
+                  items: ['OMR', 'USD', 'EUR', 'GBP', 'AED'],
+                  onChanged: (value) {
+                    setState(() {
+                      _defaultCurrency = value!;
+                    });
+                  },
+                  icon: Icons.currency_exchange,
+                  color: Colors.green,
+                ),
+                _buildDropdownTile(
+                  title: 'Default Language',
+                  subtitle: 'Primary language for the platform',
+                  value: _defaultLanguage,
+                  items: ['English', 'Arabic', 'Hindi', 'Urdu'],
+                  onChanged: (value) {
+                    setState(() {
+                      _defaultLanguage = value!;
+                    });
+                  },
+                  icon: Icons.language,
+                  color: Colors.blue,
+                ),
+                const SizedBox(height: 16),
+                _buildTextFieldTile(
+                  title: 'Support Email',
+                  subtitle: 'Customer support email address',
+                  value: _supportEmail,
+                  onChanged: (value) {
+                    setState(() {
+                      _supportEmail = value;
+                    });
+                  },
+                  icon: Icons.support_agent,
+                  color: Colors.purple,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                _buildTextFieldTile(
+                  title: 'Support Phone',
+                  subtitle: 'Customer support phone number',
+                  value: _supportPhone,
+                  onChanged: (value) {
+                    setState(() {
+                      _supportPhone = value;
+                    });
+                  },
+                  icon: Icons.phone,
+                  color: Colors.orange,
+                  keyboardType: TextInputType.phone,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _saveSettings,
+                    icon: const Icon(Icons.save),
+                    label: const Text('Save All Settings'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4169E1),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _loadSettings,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reset Changes'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF7F8C8D),
+                      side: const BorderSide(color: Color(0xFF7F8C8D)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwitchTile({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required IconData icon,
+    required Color color,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon,
+        color: color,
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF2C3E50),
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(
+          fontSize: 14,
+          color: Color(0xFF7F8C8D),
+        ),
+      ),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: const Color(0xFF4169E1),
+      ),
+    );
+  }
+
+  Widget _buildSliderTile({
+    required String title,
+    required String subtitle,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required ValueChanged<double> onChanged,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(icon, color: color),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 14,
               color: Color(0xFF7F8C8D),
             ),
-            SizedBox(height: 16),
-            Text(
-              'System Settings',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2C3E50),
-              ),
+          ),
+        ),
+        Slider(
+          value: value,
+          min: min,
+          max: max,
+          divisions: divisions,
+          onChanged: onChanged,
+          activeColor: const Color(0xFF4169E1),
+          inactiveColor: Colors.grey[300],
+          label: value.toStringAsFixed(1),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'Current value: ${value.toStringAsFixed(1)}',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF7F8C8D),
             ),
-            SizedBox(height: 8),
-            Text(
-              'Configure system-wide settings and preferences',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF7F8C8D),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownTile({
+    required String title,
+    required String subtitle,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+    required IconData icon,
+    required Color color,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF2C3E50),
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(
+          fontSize: 14,
+          color: Color(0xFF7F8C8D),
+        ),
+      ),
+      trailing: DropdownButton<String>(
+        value: value,
+        onChanged: onChanged,
+        items: items.map<DropdownMenuItem<String>>((String value) {
+          return DropdownMenuItem<String>(
+            value: value,
+            child: Text(value),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildTextFieldTile({
+    required String title,
+    required String subtitle,
+    required String value,
+    required ValueChanged<String> onChanged,
+    required IconData icon,
+    required Color color,
+    required TextInputType keyboardType,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF2C3E50),
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(
+          fontSize: 14,
+          color: Color(0xFF7F8C8D),
+        ),
+      ),
+      trailing: SizedBox(
+        width: 150,
+        child: TextField(
+          controller: TextEditingController(text: value),
+          onChanged: onChanged,
+          keyboardType: keyboardType,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 8),
+          ),
         ),
       ),
     );
