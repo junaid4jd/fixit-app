@@ -10,6 +10,7 @@ import 'reports_analytics_screen.dart';
 import 'content_management_screen.dart';
 import 'service_approval_screen.dart';
 import '../services/admin_stats_service.dart';
+import '../services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 
@@ -454,6 +455,56 @@ class _AdminOverviewState extends State<AdminOverview> {
     }
   }
 
+  Future<void> _logout(BuildContext context) async {
+    try {
+      // Show confirmation dialog
+      bool? confirmLogout = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Logout'),
+            content: const Text('Are you sure you want to logout?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Logout'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirmLogout == true) {
+        final authService = AuthService();
+        await authService.signOut();
+
+        if (context.mounted) {
+          // Navigate back to auth wrapper/role selection
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/auth',
+                (route) => false,
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error logging out: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -475,6 +526,14 @@ class _AdminOverviewState extends State<AdminOverview> {
               Icons.notifications_outlined,
               color: Color(0xFF7F8C8D),
             ),
+          ),
+          IconButton(
+            onPressed: () => _logout(context),
+            icon: const Icon(
+              Icons.logout,
+              color: Color(0xFF7F8C8D),
+            ),
+            tooltip: 'Logout',
           ),
           const SizedBox(width: 8),
         ],
