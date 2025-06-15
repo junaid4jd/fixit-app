@@ -139,46 +139,42 @@ class _ServiceProviderProfilePageState
       if (user != null) {
         debugPrint('🔍 Loading reviews for handyman: ${user.uid}');
 
-        // Try multiple query approaches to find reviews
         List<Map<String, dynamic>> allReviews = [];
 
-        // Query 1: handymanId field (new format)
+        // Query 1: handymanId field
         try {
           QuerySnapshot reviewsSnapshot1 = await FirebaseFirestore.instance
               .collection('reviews')
               .where('handymanId', isEqualTo: user.uid)
-              .where('status', isEqualTo: 'approved')
-              .orderBy('createdAt', descending: true)
-              .limit(10)
               .get();
 
-          debugPrint(
-              '📋 Query 1 (handymanId + approved): Found ${reviewsSnapshot1.docs
-                  .length} reviews');
+          debugPrint('📋 Query 1 (handymanId): Found ${reviewsSnapshot1.docs
+              .length} reviews');
 
           for (var doc in reviewsSnapshot1.docs) {
-            allReviews.add({
+            Map<String, dynamic> reviewData = {
               'id': doc.id,
               ...doc.data() as Map<String, dynamic>,
-            });
+            };
+
+            // Only add approved reviews
+            if (reviewData['status'] == 'approved') {
+              allReviews.add(reviewData);
+            }
           }
         } catch (e) {
           debugPrint('⚠️ Query 1 failed: $e');
         }
 
-        // Query 2: handyman_id field (old format)
+        // Query 2: handyman_id field
         try {
           QuerySnapshot reviewsSnapshot2 = await FirebaseFirestore.instance
               .collection('reviews')
               .where('handyman_id', isEqualTo: user.uid)
-              .where('status', isEqualTo: 'approved')
-              .orderBy('created_at', descending: true)
-              .limit(10)
               .get();
 
-          debugPrint(
-              '📋 Query 2 (handyman_id + approved): Found ${reviewsSnapshot2.docs
-                  .length} reviews');
+          debugPrint('📋 Query 2 (handyman_id): Found ${reviewsSnapshot2.docs
+              .length} reviews');
 
           for (var doc in reviewsSnapshot2.docs) {
             Map<String, dynamic> reviewData = {
@@ -186,46 +182,15 @@ class _ServiceProviderProfilePageState
               ...doc.data() as Map<String, dynamic>,
             };
 
-            // Check if this review is already in the list (avoid duplicates)
+            // Check for duplicates and only add approved reviews
             bool isDuplicate = allReviews.any((
                 existingReview) => existingReview['id'] == doc.id);
-            if (!isDuplicate) {
+            if (!isDuplicate && reviewData['status'] == 'approved') {
               allReviews.add(reviewData);
             }
           }
         } catch (e) {
           debugPrint('⚠️ Query 2 failed: $e');
-        }
-
-        // Query 3: Fallback - get all reviews for this handyman (any status)
-        if (allReviews.isEmpty) {
-          try {
-            debugPrint('🔄 Trying fallback query without status filter...');
-
-            QuerySnapshot fallbackSnapshot = await FirebaseFirestore.instance
-                .collection('reviews')
-                .where('handymanId', isEqualTo: user.uid)
-                .get();
-
-            debugPrint(
-                '📋 Fallback query (handymanId): Found ${fallbackSnapshot.docs
-                    .length} reviews');
-
-            for (var doc in fallbackSnapshot.docs) {
-              Map<String, dynamic> reviewData = doc.data() as Map<
-                  String,
-                  dynamic>;
-              debugPrint(
-                  '📄 Review status: ${reviewData['status']}, rating: ${reviewData['rating']}');
-
-              allReviews.add({
-                'id': doc.id,
-                ...reviewData,
-              });
-            }
-          } catch (e) {
-            debugPrint('⚠️ Fallback query also failed: $e');
-          }
         }
 
         // Convert and format reviews for display
@@ -241,11 +206,10 @@ class _ServiceProviderProfilePageState
           };
         }).toList();
 
+        // Sort by date (most recent first) - simple sort since we have formatted dates
+        formattedReviews.sort((a, b) => b['date'].compareTo(a['date']));
+
         debugPrint('✅ Final processed reviews: ${formattedReviews.length}');
-        for (int i = 0; i < formattedReviews.length; i++) {
-          debugPrint(
-              '📝 Review $i: ${formattedReviews[i]['userName']} - ${formattedReviews[i]['rating']} stars - ${formattedReviews[i]['status']}');
-        }
 
         setState(() {
           _reviews = formattedReviews;

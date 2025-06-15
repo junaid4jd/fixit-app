@@ -46,41 +46,42 @@ class _ServiceProviderReviewsScreenState
 
         List<Map<String, dynamic>> allReviews = [];
 
-        // Query 1: handymanId field with approved status
+        // Query 1: handymanId field (try all statuses first)
         try {
           QuerySnapshot reviewsSnapshot1 = await FirebaseFirestore.instance
               .collection('reviews')
               .where('handymanId', isEqualTo: user.uid)
-              .where('status', isEqualTo: 'approved')
-              .orderBy('createdAt', descending: true)
               .get();
 
-          debugPrint(
-              '📋 Query 1 (handymanId + approved): Found ${reviewsSnapshot1.docs
-                  .length} reviews');
+          debugPrint('📋 Query 1 (handymanId): Found ${reviewsSnapshot1.docs
+              .length} reviews');
 
           for (var doc in reviewsSnapshot1.docs) {
-            allReviews.add({
+            Map<String, dynamic> reviewData = {
               'id': doc.id,
               ...doc.data() as Map<String, dynamic>,
-            });
+            };
+
+            // Only add approved reviews to display
+            if (reviewData['status'] == 'approved') {
+              allReviews.add(reviewData);
+            }
+            debugPrint('📄 Review: ${doc
+                .id} - Status: ${reviewData['status']} - Rating: ${reviewData['rating']}');
           }
         } catch (e) {
           debugPrint('⚠️ Query 1 failed: $e');
         }
 
-        // Query 2: handyman_id field with approved status
+        // Query 2: handyman_id field (try all statuses)
         try {
           QuerySnapshot reviewsSnapshot2 = await FirebaseFirestore.instance
               .collection('reviews')
               .where('handyman_id', isEqualTo: user.uid)
-              .where('status', isEqualTo: 'approved')
-              .orderBy('created_at', descending: true)
               .get();
 
-          debugPrint(
-              '📋 Query 2 (handyman_id + approved): Found ${reviewsSnapshot2.docs
-                  .length} reviews');
+          debugPrint('📋 Query 2 (handyman_id): Found ${reviewsSnapshot2.docs
+              .length} reviews');
 
           for (var doc in reviewsSnapshot2.docs) {
             Map<String, dynamic> reviewData = {
@@ -91,9 +92,13 @@ class _ServiceProviderReviewsScreenState
             // Check if this review is already in the list (avoid duplicates)
             bool isDuplicate = allReviews.any((
                 existingReview) => existingReview['id'] == doc.id);
-            if (!isDuplicate) {
+
+            // Only add approved reviews and avoid duplicates
+            if (!isDuplicate && reviewData['status'] == 'approved') {
               allReviews.add(reviewData);
             }
+            debugPrint('📄 Review: ${doc
+                .id} - Status: ${reviewData['status']} - Rating: ${reviewData['rating']} - Duplicate: $isDuplicate');
           }
         } catch (e) {
           debugPrint('⚠️ Query 2 failed: $e');
@@ -126,7 +131,7 @@ class _ServiceProviderReviewsScreenState
         }).toList();
 
         debugPrint('✅ Loaded ${formattedReviews
-            .length} reviews, average rating: $averageRating');
+            .length} approved reviews, average rating: $averageRating');
 
         setState(() {
           _reviews = formattedReviews;

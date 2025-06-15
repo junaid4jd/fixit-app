@@ -6,7 +6,6 @@ import 'service_requests_page.dart';
 import 'service_provider_schedule_page.dart';
 import 'service_provider_profile_page.dart';
 import 'service_provider_reviews_screen.dart';
-import 'debug_reviews_screen.dart';
 import 'my_services_screen.dart';
 
 class ServiceProviderHomeScreen extends StatefulWidget {
@@ -499,33 +498,6 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
                     ),
                   ),
                 ],
-              ),
-
-              const SizedBox(height: 30),
-
-              // Temporary debug button
-              Center(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const DebugReviewsScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.bug_report),
-                  label: const Text('Debug Reviews'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                  ),
-                ),
               ),
             ],
           ),
