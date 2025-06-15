@@ -5,6 +5,7 @@ import '../role_selection_screen.dart';
 import 'service_requests_page.dart';
 import 'service_provider_schedule_page.dart';
 import 'service_provider_profile_page.dart';
+import 'service_provider_reviews_screen.dart';
 import 'my_services_screen.dart';
 
 class ServiceProviderHomeScreen extends StatefulWidget {
@@ -463,7 +464,15 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
                     child: _buildQuickAction(
                       icon: Icons.rate_review,
                       title: 'View Reviews',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                            const ServiceProviderReviewsScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
